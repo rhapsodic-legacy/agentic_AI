@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧑‍💻 AI Software Development Team</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * { font-family: 'Inter', sans-serif; }
+        code, pre { font-family: 'JetBrains Mono', monospace; }
+        
+        body {
+            background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+        }
+        
+        /* Animated gradient header */
+        .header-gradient {
+            background: linear-gradient(90deg, #667eea, #764ba2, #6B8DD6, #8E37D7);
+            background-size: 300% 300%;
+            animation: gradient-flow 8s ease infinite;
+        }
+        
+        @keyframes gradient-flow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* Glass morphism */
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Agent cards */
+        .agent-card {
+            transition: all 0.3s ease;
+        }
+        
+        .agent-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Progress animation */
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(99, 102, 241, 0.6); }
+        }
+        
+        .building {
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+        
+        /* File tree */
+        .file-tree {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+        }
+        
+        /* Typing animation */
+        .typing::after {
+            content: '▋';
+            animation: blink 1s step-end infinite;
+        }
+        
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+        
+        /* Code block styling */
+        pre code.hljs {
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.5); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        
+        const API_BASE = '';
+        
+        // Agent info with icons and colors
+        const AGENTS = {
+            product_manager: { icon: '📋', color: 'from-pink-500 to-rose-500', title: 'Product Manager' },
+            tech_lead: { icon: '🏗️', color: 'from-purple-500 to-indigo-500', title: 'Tech Lead' },
+            backend_dev: { icon: '⚙️', color: 'from-blue-500 to-cyan-500', title: 'Backend Developer' },
+            frontend_dev: { icon: '🎨', color: 'from-green-500 to-emerald-500', title: 'Frontend Developer' },
+            devops: { icon: '🚀', color: 'from-orange-500 to-amber-500', title: 'DevOps Engineer' },
+            qa: { icon: '🧪', color: 'from-teal-500 to-cyan-500', title: 'QA Engineer' },
+            security: { icon: '🔒', color: 'from-red-500 to-pink-500', title: 'Security Engineer' },
+            docs: { icon: '📝', color: 'from-yellow-500 to-orange-500', title: 'Technical Writer' },
+        };
+        
+        // API functions
+        const api = {
+            async init(config) {
+                const res = await fetch(`${API_BASE}/api/init`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config),
+                });
+                return res.json();
+            },
+            
+            async getStatus() {
+                const res = await fetch(`${API_BASE}/api/status`);
+                return res.json();
+            },
+            
+            async build(request) {
+                const res = await fetch(`${API_BASE}/api/build`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(request),
+                });
+                return res.json();
+            },
+            
+            async runTask(request) {
+                const res = await fetch(`${API_BASE}/api/task`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(request),
+                });
+                return res.json();
+            },
+            
+            async getFile(project, path) {
+                const res = await fetch(`${API_BASE}/api/files/${project}/${path}`);
+                return res.json();
+            },
+        };
+        
+        // Components
+        function Header({ status }) {
+            return (
+                <header className="header-gradient py-6 shadow-2xl">
+                    <div className="container mx-auto px-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                                <div className="text-4xl">🧑‍💻</div>
+                                <div>
+                                    <h1 className="text-3xl font-bold text-white">AI Dev Team</h1>
+                                    <p className="text-white/80">Multi-Agent Software Development</p>
+                                </div>
+                            </div>
+                            
+                            <div className="flex items-center space-x-4">
+                                <div className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                                    status === 'ready' 
+                                        ? 'bg-green-500/20 text-green-300 border border-green-500/30' 
+                                        : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
+                                }`}>
+                                    {status === 'ready' ? '● Ready' : '○ Not Initialized'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+            );
+        }
+        
+        function AgentCard({ agentKey, agent }) {
+            const info = AGENTS[agentKey] || { icon: '🤖', color: 'from-gray-500 to-gray-600', title: agentKey };
+            
+            return (
+                <div className={`agent-card glass rounded-xl p-4 cursor-pointer`}>
+                    <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${info.color} flex items-center justify-center text-2xl mb-3`}>
+                        {info.icon}
+                    </div>
+                    <h3 className="text-white font-semibold">{info.title}</h3>
+                    <p className="text-gray-400 text-sm mt-1 line-clamp-2">{agent.goal}</p>
+                </div>
+            );
+        }
+        
+        function TeamPanel({ team }) {
+            if (!team || !team.agents) return null;
+            
+            return (
+                <div className="glass rounded-xl p-6">
+                    <h2 className="text-xl font-bold text-white mb-4 flex items-center">
+                        <span className="mr-2">👥</span> Development Team
+                    </h2>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {team.agents.map((agent, i) => {
+                            const key = Object.keys(AGENTS)[i] || `agent_${i}`;
+                            return <AgentCard key={key} agentKey={key} agent={agent} />;
+                        })}
+                    </div>
+                    
+                    <div className="mt-4 pt-4 border-t border-white/10 text-sm text-gray-400">
+                        <span className="text-blue-400">{team.llm_provider}</span> • {team.team_type} team
+                    </div>
+                </div>
+            );
+        }
+        
+        function ConfigPanel({ onInit, status }) {
+            const [config, setConfig] = useState({
+                provider: 'gemini',
+                team_type: 'minimal',
+            });
+            const [loading, setLoading] = useState(false);
+            
+            const handleInit = async () => {
+                setLoading(true);
+                try {
+                    await api.init(config);
+                    onInit();
+                } catch (err) {
+                    console.error(err);
+                }
+                setLoading(false);
+            };
+            
+            return (
+                <div className="glass rounded-xl p-6">
+                    <h2 className="text-xl font-bold text-white mb-4 flex items-center">
+                        <span className="mr-2">⚙️</span> Configuration
+                    </h2>
+                    
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm text-gray-400 mb-1">LLM Provider</label>
+                            <select
+                                value={config.provider}
+                                onChange={e => setConfig({...config, provider: e.target.value})}
+                                className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white"
+                            >
+                                <option value="gemini">Google Gemini</option>
+                                <option value="anthropic">Anthropic Claude</option>
+                                <option value="openai">OpenAI GPT</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label className="block text-sm text-gray-400 mb-1">Team Type</label>
+                            <select
+                                value={config.team_type}
+                                onChange={e => setConfig({...config, team_type: e.target.value})}
+                                className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white"
+                            >
+                                <option value="minimal">Minimal (5 agents)</option>
+                                <option value="backend">Backend (7 agents)</option>
+                                <option value="full">Full Stack (8 agents)</option>
+                            </select>
+                        </div>
+                        
+                        <button
+                            onClick={handleInit}
+                            disabled={loading || status === 'ready'}
+                            className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-2 rounded-lg font-medium hover:opacity-90 disabled:opacity-50"
+                        >
+                            {loading ? 'Initializing...' : status === 'ready' ? '✓ Team Ready' : 'Initialize Team'}
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+        
+        function BuildPanel({ status, onBuildComplete }) {
+            const [description, setDescription] = useState('');
+            const [options, setOptions] = useState({
+                provider: 'gemini',
+                team_type: 'minimal',
+                include_frontend: false,
+            });
+            const [building, setBuilding] = useState(false);
+            const [result, setResult] = useState(null);
+            
+            const examples = [
+                "Build a REST API for a todo app with user authentication",
+                "Create a URL shortener service with analytics",
+                "Build a blog API with posts, comments, and tags",
+                "Create a simple inventory management system",
+            ];
+            
+            const handleBuild = async () => {
+                if (!description || status !== 'ready') return;
+                
+                setBuilding(true);
+                setResult(null);
+                
+                try {
+                    const res = await api.build({
+                        description,
+                        ...options,
+                    });
+                    setResult(res);
+                    if (onBuildComplete) onBuildComplete(res);
+                } catch (err) {
+                    setResult({ status: 'failed', errors: [err.message] });
+                }
+                
+                setBuilding(false);
+            };
+            
+            return (
+                <div className="space-y-6">
+                    {/* Build input */}
+                    <div className={`glass rounded-xl p-6 ${building ? 'building' : ''}`}>
+                        <h2 className="text-xl font-bold text-white mb-4 flex items-center">
+                            <span className="mr-2">🔨</span> Build a Project
+                        </h2>
+                        
+                        <textarea
+                            placeholder="Describe what you want to build..."
+                            value={description}
+                            onChange={e => setDescription(e.target.value)}
+                            rows={3}
+                            className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                        
+                        <div className="flex flex-wrap gap-2 mt-3">
+                            {examples.map(ex => (
+                                <button
+                                    key={ex}
+                                    onClick={() => setDescription(ex)}
+                                    className="text-xs bg-white/10 text-gray-300 px-3 py-1 rounded-full hover:bg-white/20"
+                                >
+                                    {ex.slice(0, 40)}...
+                                </button>
+                            ))}
+                        </div>
+                        
+                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10">
+                            <div className="flex items-center space-x-4">
+                                <label className="flex items-center space-x-2 text-sm text-gray-300">
+                                    <input
+                                        type="checkbox"
+                                        checked={options.include_frontend}
+                                        onChange={e => setOptions({...options, include_frontend: e.target.checked})}
+                                        className="rounded bg-white/10 border-white/20"
+                                    />
+                                    <span>Include Frontend</span>
+                                </label>
+                            </div>
+                            
+                            <button
+                                onClick={handleBuild}
+                                disabled={building || status !== 'ready' || !description}
+                                className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 disabled:opacity-50 flex items-center space-x-2"
+                            >
+                                {building ? (
+                                    <>
+                                        <span className="animate-spin">⚙️</span>
+                                        <span>Building...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>🚀</span>
+                                        <span>Build Project</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                    
+                    {/* Build result */}
+                    {result && <BuildResult result={result} />}
+                </div>
+            );
+        }
+        
+        function BuildResult({ result }) {
+            const [selectedFile, setSelectedFile] = useState(null);
+            const [fileContent, setFileContent] = useState(null);
+            
+            const loadFile = async (filepath) => {
+                setSelectedFile(filepath);
+                try {
+                    const data = await api.getFile(result.project_name, filepath);
+                    setFileContent(data.content);
+                    // Highlight code
+                    setTimeout(() => hljs.highlightAll(), 100);
+                } catch (err) {
+                    setFileContent('Error loading file');
+                }
+            };
+            
+            const isSuccess = result.status === 'completed';
+            
+            return (
+                <div className={`glass rounded-xl p-6 border ${isSuccess ? 'border-green-500/30' : 'border-red-500/30'}`}>
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-xl font-bold text-white flex items-center">
+                            <span className="mr-2">{isSuccess ? '✅' : '❌'}</span>
+                            Build {isSuccess ? 'Complete' : 'Failed'}
+                        </h2>
+                        
+                        {result.total_time && (
+                            <span className="text-gray-400 text-sm">
+                                ⏱️ {result.total_time.toFixed(1)}s
+                            </span>
+                        )}
+                    </div>
+                    
+                    {isSuccess ? (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* File tree */}
+                            <div>
+                                <h3 className="text-sm font-medium text-gray-400 mb-2">Files Created</h3>
+                                <div className="file-tree bg-black/30 rounded-lg p-4 max-h-80 overflow-auto">
+                                    {result.files_created?.map((file, i) => {
+                                        const relPath = file.split('/').slice(-2).join('/');
+                                        const isCode = /\.(py|js|ts|json|yaml|yml|md|txt|html|css)$/.test(file);
+                                        return (
+                                            <div
+                                                key={i}
+                                                onClick={() => isCode && loadFile(relPath)}
+                                                className={`py-1 ${isCode ? 'cursor-pointer hover:text-blue-400' : ''} ${selectedFile === relPath ? 'text-blue-400' : 'text-gray-300'}`}
+                                            >
+                                                📄 {relPath}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                
+                                <div className="mt-4 text-sm text-gray-400">
+                                    📁 Output: <code className="text-blue-400">{result.output_dir}</code>
+                                </div>
+                            </div>
+                            
+                            {/* File content */}
+                            <div>
+                                <h3 className="text-sm font-medium text-gray-400 mb-2">
+                                    {selectedFile || 'Select a file to view'}
+                                </h3>
+                                <div className="bg-black/30 rounded-lg overflow-auto max-h-80">
+                                    {fileContent ? (
+                                        <pre><code className="language-python">{fileContent}</code></pre>
+                                    ) : (
+                                        <div className="p-4 text-gray-500 text-center">
+                                            Click a file to view its content
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="text-red-400">
+                            {result.errors?.map((err, i) => (
+                                <div key={i}>❌ {err}</div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+        
+        function App() {
+            const [status, setStatus] = useState('not_initialized');
+            const [team, setTeam] = useState(null);
+            
+            const checkStatus = async () => {
+                try {
+                    const data = await api.getStatus();
+                    setStatus(data.status);
+                    if (data.team) setTeam(data.team);
+                } catch (err) {
+                    console.error(err);
+                }
+            };
+            
+            const handleInit = async () => {
+                await checkStatus();
+            };
+            
+            useEffect(() => {
+                checkStatus();
+            }, []);
+            
+            return (
+                <div className="min-h-screen">
+                    <Header status={status} />
+                    
+                    <main className="container mx-auto px-4 py-8">
+                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                            {/* Sidebar */}
+                            <div className="space-y-6">
+                                <ConfigPanel onInit={handleInit} status={status} />
+                            </div>
+                            
+                            {/* Main content */}
+                            <div className="lg:col-span-3 space-y-6">
+                                {team && <TeamPanel team={team} />}
+                                <BuildPanel status={status} />
+                            </div>
+                        </div>
+                    </main>
+                    
+                    <footer className="border-t border-white/10 py-6 mt-8">
+                        <div className="container mx-auto px-4 text-center text-gray-500 text-sm">
+                            🧑‍💻 AI Software Development Team • Powered by CrewAI • Multi-Agent Development
+                        </div>
+                    </footer>
+                </div>
+            );
+        }
+        
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
