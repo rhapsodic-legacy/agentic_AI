@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Research Paper Synthesizer - Command Line Interface
+Research Paper Synthesizer - Command Line Interface 
 
 Usage:
     python main.py research "Large Language Models"
