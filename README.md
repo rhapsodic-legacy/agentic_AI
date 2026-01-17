@@ -6,3 +6,6 @@ A comprehensive collection of hierarchal Agentic AI setups, covering different f
 
 ### 2) Research Paper Synthesizer
  An agentic system using **LangGraph** that researches topics, finds relevant papers, synthesizes findings, and produces literature reviews or research proposals.
+
+### 3) Autonmous Data Analyst 
+ A conversational AI data analyst using **AutoGen** that can connect to databases, explore data, generate insights, create visualizations, and produce reports; all through natural language.
