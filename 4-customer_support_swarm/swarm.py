@@ -1,5 +1,5 @@
 """
-Customer Support Swarm - Main Orchestrator
+Customer Support Swarm - Main Orchestrator 
 
 Implements the Swarm pattern for multi-agent customer support
 with seamless handoffs between specialized agents.
