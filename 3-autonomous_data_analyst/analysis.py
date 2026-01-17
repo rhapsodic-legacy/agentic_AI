@@ -1,5 +1,5 @@
 """
-Autonomous Data Analyst - Analysis Tools
+Autonomous Data Analyst - Analysis Tools 
 
 Tools for:
 - Data profiling
