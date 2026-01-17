@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📚 Research Paper Synthesizer</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap');
+        
+        * { font-family: 'Inter', sans-serif; }
+        .prose { font-family: 'Crimson Pro', serif; }
+        
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+        }
+        
+        /* Academic paper styling */
+        .paper-output {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.1rem;
+            line-height: 1.8;
+        }
+        
+        .paper-output h1 { font-size: 2rem; font-weight: 600; margin-bottom: 1rem; }
+        .paper-output h2 { font-size: 1.5rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 0.5rem; }
+        .paper-output h3 { font-size: 1.25rem; font-weight: 600; margin-top: 1.5rem; }
+        .paper-output p { margin-bottom: 1rem; }
+        .paper-output ul { margin-left: 1.5rem; margin-bottom: 1rem; }
+        .paper-output li { margin-bottom: 0.5rem; }
+        
+        /* Glass effect */
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Graph visualization */
+        .graph-node {
+            transition: all 0.3s ease;
+        }
+        
+        .graph-node:hover {
+            transform: scale(1.05);
+        }
+        
+        .graph-node.active {
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
+        }
+        
+        /* Progress animation */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .researching {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        /* Source badges */
+        .source-arxiv { background: linear-gradient(135deg, #b31b1b, #e74c3c); }
+        .source-semantic_scholar { background: linear-gradient(135deg, #1857b6, #3498db); }
+        .source-pubmed { background: linear-gradient(135deg, #2e7d32, #4caf50); }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        
+        const API_BASE = '';
+        
+        // API functions
+        const api = {
+            async init(provider) {
+                const res = await fetch(`${API_BASE}/api/init`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ provider }),
+                });
+                return res.json();
+            },
+            
+            async getStatus() {
+                const res = await fetch(`${API_BASE}/api/status`);
+                return res.json();
+            },
+            
+            async research(request) {
+                const res = await fetch(`${API_BASE}/api/research`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(request),
+                });
+                return res.json();
+            },
+            
+            async search(query, sources) {
+                const res = await fetch(`${API_BASE}/api/search`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, sources }),
+                });
+                return res.json();
+            },
+            
+            async getFormats() {
+                const res = await fetch(`${API_BASE}/api/formats`);
+                return res.json();
+            },
+        };
+        
+        // Components
+        function Header({ status }) {
+            return (
+                <header className="border-b border-white/10 py-6">
+                    <div className="container mx-auto px-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                                <div className="text-4xl">📚</div>
+                                <div>
+                                    <h1 className="text-3xl font-bold text-white">Research Synthesizer</h1>
+                                    <p className="text-blue-300">LangGraph-powered Academic Research</p>
+                                </div>
+                            </div>
+                            
+                            <div className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                                status === 'ready' 
+                                    ? 'bg-green-500/20 text-green-300 border border-green-500/30' 
+                                    : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
+                            }`}>
+                                {status === 'ready' ? '● Ready' : '○ Not Initialized'}
+                            </div>
+                        </div>
+                    </div>
+                </header>
+            );
+        }
+        
+        function GraphVisualization({ activeNode }) {
+            const nodes = [
+                { id: 'planner', label: 'Planner', icon: '📋', y: 0 },
+                { id: 'searcher', label: 'Searcher', icon: '🔍', y: 1 },
+                { id: 'reader', label: 'Reader', icon: '📖', y: 2 },
+                { id: 'evaluator', label: 'Evaluator', icon: '⚖️', y: 3 },
+                { id: 'synthesizer', label: 'Synthesizer', icon: '🔬', y: 4 },
+                { id: 'writer', label: 'Writer', icon: '✍️', y: 5 },
+            ];
+            
+            return (
+                <div className="glass rounded-xl p-4">
+                    <h3 className="text-sm font-medium text-gray-400 mb-3">Workflow</h3>
+                    <div className="space-y-2">
+                        {nodes.map((node, i) => (
+                            <div key={node.id} className="flex items-center">
+                                <div className={`graph-node flex items-center space-x-2 px-3 py-2 rounded-lg ${
+                                    activeNode === node.id 
+                                        ? 'bg-indigo-500/30 border border-indigo-500/50 active' 
+                                        : 'bg-white/5'
+                                }`}>
+                                    <span>{node.icon}</span>
+                                    <span className="text-sm text-white">{node.label}</span>
+                                </div>
+                                {i < nodes.length - 1 && (
+                                    <div className="ml-4 text-gray-500">↓</div>
+                                )}
+                                {node.id === 'evaluator' && (
+                                    <div className="ml-2 text-xs text-gray-500">
+                                        ↺ (if not sufficient)
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+        
+        function ConfigPanel({ config, setConfig, onInit, status }) {
+            const [loading, setLoading] = useState(false);
+            
+            const handleInit = async () => {
+                setLoading(true);
+                try {
+                    await api.init(config.provider);
+                    onInit();
+                } catch (err) {
+                    console.error(err);
+                }
+                setLoading(false);
+            };
+            
+            return (
+                <div className="glass rounded-xl p-5">
+                    <h2 className="text-lg font-semibold text-white mb-4">⚙️ Configuration</h2>
+                    
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm text-gray-400 mb-1">LLM Provider</label>
+                            <select
+                                value={config.provider}
+                                onChange={e => setConfig({...config, provider: e.target.value})}
+                                className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white"
+                            >
+                                <option value="gemini">Google Gemini</option>
+                                <option value="anthropic">Anthropic Claude</option>
+                                <option value="openai">OpenAI GPT</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label className="block text-sm text-gray-400 mb-1">Output Format</label>
+                            <select
+                                value={config.format}
+                                onChange={e => setConfig({...config, format: e.target.value})}
+                                className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white"
+                            >
+                                <option value="literature_review">Literature Review</option>
+                                <option value="research_proposal">Research Proposal</option>
+                                <option value="blog_post">Blog Post</option>
+                                <option value="executive_summary">Executive Summary</option>
+                                <option value="annotated_bibliography">Annotated Bibliography</option>
+                            </select>
+                        </div>
+                        
+                        <div className="space-y-2">
+                            <label className="block text-sm text-gray-400">Sources</label>
+                            {['arxiv', 'semantic_scholar', 'pubmed'].map(source => (
+                                <label key={source} className="flex items-center space-x-2 text-sm text-gray-300">
+                                    <input
+                                        type="checkbox"
+                                        checked={config.sources.includes(source)}
+                                        onChange={e => {
+                                            if (e.target.checked) {
+                                                setConfig({...config, sources: [...config.sources, source]});
+                                            } else {
+                                                setConfig({...config, sources: config.sources.filter(s => s !== source)});
+                                            }
+                                        }}
+                                        className="rounded bg-white/10 border-white/20"
+                                    />
+                                    <span className={`source-${source} px-2 py-0.5 rounded text-xs text-white`}>
+                                        {source.replace('_', ' ')}
+                                    </span>
+                                </label>
+                            ))}
+                        </div>
+                        
+                        <button
+                            onClick={handleInit}
+                            disabled={loading || status === 'ready'}
+                            className="w-full bg-indigo-500 text-white py-2 rounded-lg font-medium hover:bg-indigo-600 disabled:opacity-50"
+                        >
+                            {loading ? 'Initializing...' : status === 'ready' ? '✓ Ready' : 'Initialize'}
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+        
+        function ResearchPanel({ config, status }) {
+            const [topic, setTopic] = useState('');
+            const [researching, setResearching] = useState(false);
+            const [result, setResult] = useState(null);
+            const [activeNode, setActiveNode] = useState(null);
+            
+            const examples = [
+                "Large Language Models in Healthcare",
+                "Transformer Architectures for NLP",
+                "Reinforcement Learning from Human Feedback",
+                "Graph Neural Networks for Drug Discovery",
+            ];
+            
+            const handleResearch = async () => {
+                if (!topic || status !== 'ready') return;
+                
+                setResearching(true);
+                setResult(null);
+                setActiveNode('planner');
+                
+                // Simulate node progression (in real app, use streaming)
+                const nodes = ['planner', 'searcher', 'reader', 'evaluator', 'synthesizer', 'writer'];
+                let nodeIndex = 0;
+                const nodeInterval = setInterval(() => {
+                    nodeIndex++;
+                    if (nodeIndex < nodes.length) {
+                        setActiveNode(nodes[nodeIndex]);
+                    }
+                }, 3000);
+                
+                try {
+                    const res = await api.research({
+                        topic,
+                        output_format: config.format,
+                        provider: config.provider,
+                        enable_arxiv: config.sources.includes('arxiv'),
+                        enable_semantic_scholar: config.sources.includes('semantic_scholar'),
+                        enable_pubmed: config.sources.includes('pubmed'),
+                    });
+                    setResult(res);
+                } catch (err) {
+                    console.error(err);
+                    setResult({ error: err.message });
+                }
+                
+                clearInterval(nodeInterval);
+                setActiveNode(null);
+                setResearching(false);
+            };
+            
+            return (
+                <div className="space-y-6">
+                    {/* Input */}
+                    <div className={`glass rounded-xl p-6 ${researching ? 'researching' : ''}`}>
+                        <h2 className="text-xl font-bold text-white mb-4">🔬 Research a Topic</h2>
+                        
+                        <div className="flex space-x-3">
+                            <input
+                                type="text"
+                                placeholder="Enter a research topic..."
+                                value={topic}
+                                onChange={e => setTopic(e.target.value)}
+                                onKeyPress={e => e.key === 'Enter' && handleResearch()}
+                                className="flex-1 bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-400"
+                            />
+                            <button
+                                onClick={handleResearch}
+                                disabled={researching || status !== 'ready' || !topic}
+                                className="bg-indigo-500 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-600 disabled:opacity-50"
+                            >
+                                {researching ? '🔄 Researching...' : '🚀 Research'}
+                            </button>
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-2 mt-3">
+                            {examples.map(ex => (
+                                <button
+                                    key={ex}
+                                    onClick={() => setTopic(ex)}
+                                    className="text-xs bg-white/10 text-gray-300 px-3 py-1 rounded-full hover:bg-white/20"
+                                >
+                                    {ex}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    {/* Progress */}
+                    {researching && (
+                        <div className="flex items-start space-x-4">
+                            <GraphVisualization activeNode={activeNode} />
+                            <div className="flex-1 glass rounded-xl p-4">
+                                <h3 className="text-white font-medium mb-2">Progress</h3>
+                                <div className="text-gray-400 text-sm">
+                                    {activeNode === 'planner' && '📋 Generating search queries...'}
+                                    {activeNode === 'searcher' && '🔍 Searching academic databases...'}
+                                    {activeNode === 'reader' && '📖 Analyzing papers...'}
+                                    {activeNode === 'evaluator' && '⚖️ Evaluating coverage...'}
+                                    {activeNode === 'synthesizer' && '🔬 Synthesizing findings...'}
+                                    {activeNode === 'writer' && '✍️ Generating output...'}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* Result */}
+                    {result && !result.error && <ResultDisplay result={result} />}
+                    
+                    {result?.error && (
+                        <div className="glass rounded-xl p-6 border border-red-500/30">
+                            <h3 className="text-red-400 font-medium mb-2">Error</h3>
+                            <p className="text-gray-300">{result.error}</p>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+        
+        function ResultDisplay({ result }) {
+            const [activeTab, setActiveTab] = useState('output');
+            
+            return (
+                <div className="glass rounded-xl overflow-hidden">
+                    {/* Stats bar */}
+                    <div className="bg-white/5 px-6 py-3 flex items-center justify-between border-b border-white/10">
+                        <div className="flex items-center space-x-6 text-sm">
+                            <span className="text-gray-400">
+                                📄 <span className="text-white font-medium">{result.stats?.papers_found || 0}</span> papers
+                            </span>
+                            <span className="text-gray-400">
+                                📖 <span className="text-white font-medium">{result.stats?.papers_analyzed || 0}</span> analyzed
+                            </span>
+                            <span className="text-gray-400">
+                                🏷️ <span className="text-white font-medium">{result.stats?.themes_identified || 0}</span> themes
+                            </span>
+                            <span className="text-gray-400">
+                                🔍 <span className="text-white font-medium">{result.stats?.gaps_found || 0}</span> gaps
+                            </span>
+                        </div>
+                        
+                        <div className="flex space-x-2">
+                            {['output', 'papers', 'citations'].map(tab => (
+                                <button
+                                    key={tab}
+                                    onClick={() => setActiveTab(tab)}
+                                    className={`px-3 py-1 rounded text-sm ${
+                                        activeTab === tab 
+                                            ? 'bg-indigo-500 text-white' 
+                                            : 'bg-white/10 text-gray-300'
+                                    }`}
+                                >
+                                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    {/* Content */}
+                    <div className="p-6 max-h-[600px] overflow-y-auto">
+                        {activeTab === 'output' && (
+                            <div className="paper-output text-gray-200 whitespace-pre-wrap">
+                                {result.output}
+                            </div>
+                        )}
+                        
+                        {activeTab === 'papers' && (
+                            <div className="space-y-4">
+                                {result.papers?.map((paper, i) => (
+                                    <div key={i} className="bg-white/5 rounded-lg p-4">
+                                        <div className="flex items-start justify-between">
+                                            <div>
+                                                <h4 className="text-white font-medium">{paper.title}</h4>
+                                                <p className="text-gray-400 text-sm mt-1">
+                                                    {paper.authors?.join(', ')} • {paper.year}
+                                                </p>
+                                            </div>
+                                            <span className={`source-${paper.source} px-2 py-1 rounded text-xs text-white`}>
+                                                {paper.source}
+                                            </span>
+                                        </div>
+                                        <p className="text-gray-300 text-sm mt-2">{paper.abstract}</p>
+                                        {paper.url && (
+                                            <a href={paper.url} target="_blank" className="text-blue-400 text-sm mt-2 inline-block hover:underline">
+                                                View paper →
+                                            </a>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        
+                        {activeTab === 'citations' && (
+                            <div className="space-y-2">
+                                {result.citations?.map((cite, i) => (
+                                    <div key={i} className="text-gray-300 text-sm py-2 border-b border-white/10">
+                                        [{i + 1}] {cite}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+        
+        function App() {
+            const [status, setStatus] = useState('not_initialized');
+            const [config, setConfig] = useState({
+                provider: 'gemini',
+                format: 'literature_review',
+                sources: ['arxiv', 'semantic_scholar', 'pubmed'],
+            });
+            
+            const checkStatus = async () => {
+                try {
+                    const data = await api.getStatus();
+                    setStatus(data.status);
+                } catch (err) {
+                    console.error(err);
+                }
+            };
+            
+            useEffect(() => {
+                checkStatus();
+            }, []);
+            
+            return (
+                <div className="min-h-screen">
+                    <Header status={status} />
+                    
+                    <main className="container mx-auto px-4 py-8">
+                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                            <div>
+                                <ConfigPanel 
+                                    config={config} 
+                                    setConfig={setConfig} 
+                                    onInit={checkStatus}
+                                    status={status}
+                                />
+                            </div>
+                            
+                            <div className="lg:col-span-3">
+                                <ResearchPanel config={config} status={status} />
+                            </div>
+                        </div>
+                    </main>
+                    
+                    <footer className="border-t border-white/10 py-6 mt-8">
+                        <div className="container mx-auto px-4 text-center text-gray-500 text-sm">
+                            📚 Research Paper Synthesizer • Powered by LangGraph • Multi-Source Academic Search
+                        </div>
+                    </footer>
+                </div>
+            );
+        }
+        
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
