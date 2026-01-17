@@ -9,3 +9,6 @@ A comprehensive collection of hierarchal Agentic AI setups, covering different f
 
 ### 3) Autonmous Data Analyst 
  A conversational AI data analyst using **AutoGen** that can connect to databases, explore data, generate insights, create visualizations, and produce reports; all through natural language.
+
+### 4) Customer Support Swarm 
+ A swarm of specialized support agents using **OpenAI Swarm** pattern with seamless handoffs between agents based on query type.
