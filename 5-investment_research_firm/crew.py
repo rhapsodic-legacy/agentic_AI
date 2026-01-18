@@ -2,7 +2,7 @@
 Investment Research Firm - Research Crew
 
 Main orchestration for investment research using CrewAI.
-Hub-and-Spoke architecture with Research Director coordinating specialists.
+Hub-and-Spoke architecture with Research Director coordinating specialists. 
 """
 
 from typing import Optional
