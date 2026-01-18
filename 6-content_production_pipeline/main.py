@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Content Production Pipeline - Command Line Interface
+Content Production Pipeline - Command Line Interface 
 
 Usage:
     python main.py create "AI in Marketing" --types blog,social
