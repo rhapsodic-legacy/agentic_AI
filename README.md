@@ -15,6 +15,7 @@ A comprehensive collection of hierarchal Agentic AI setups, covering different f
 
 ### 5) Investment Research Firm
  A full investment research operation using **CrewAI** with specialized analysts covering different domains, quantitative researchers, and a portfolio manager who synthesizes recommendations.
+ 
  *Disclaimer: This is for educational purposes only and not investment advice.*
 
  
