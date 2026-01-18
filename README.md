@@ -12,3 +12,9 @@ A comprehensive collection of hierarchal Agentic AI setups, covering different f
 
 ### 4) Customer Support Swarm 
  A swarm of specialized support agents using **OpenAI Swarm** pattern with seamless handoffs between agents based on query type.
+
+### 5) Investment Research Firm
+ A full investment research operation using **CrewAI** with specialized analysts covering different domains, quantitative researchers, and a portfolio manager who synthesizes recommendations.
+ *Disclaimer: This is for educational purposes only and not investment advice.*
+
+ 
