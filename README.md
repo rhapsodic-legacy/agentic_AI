@@ -18,4 +18,6 @@ A comprehensive collection of hierarchal Agentic AI setups, covering different f
  
  *Disclaimer: This is for educational purposes only and not investment advice.*
 
+### 6) Content Production Pipeline
+An end to end content production system using **LangGraph** that creates blog posts, social media content, video scripts, and newsletters from a single topic or brief.
  
