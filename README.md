@@ -21,3 +21,5 @@ A comprehensive collection of hierarchal Agentic AI setups, covering different f
 ### 6) Content Production Pipeline
 An end to end content production system using **LangGraph** that creates blog posts, social media content, video scripts, and newsletters from a single topic or brief.
  
+### 7) E-commerce Personal Shopper
+A **CrewAI** powered personal shopping assistant that understands preferences, searches across multiple retailers, compares prices, finds deals, and makes personalized recommendations.
