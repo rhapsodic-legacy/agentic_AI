@@ -1,5 +1,5 @@
 """
-E-commerce Personal Shopper - CrewAI Shopping Crew
+E-commerce Personal Shopper - CrewAI Shopping Crew 
 
 Parallel agent architecture for comprehensive shopping assistance.
 
