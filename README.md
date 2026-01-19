@@ -23,3 +23,6 @@ An end to end content production system using **LangGraph** that creates blog po
  
 ### 7) E-commerce Personal Shopper
 A **CrewAI** powered personal shopping assistant that understands preferences, searches across multiple retailers, compares prices, finds deals, and makes personalized recommendations.
+
+### 8) DevOps Incident Response System 
+An **AutoGen** powered autonomous incident response system that detects issues, diagnoses root causes, implements fixes, and coordinates communication during outages.
