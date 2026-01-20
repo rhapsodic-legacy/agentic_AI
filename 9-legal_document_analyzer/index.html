@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚖️ Legal Document Analyzer</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
+        
+        * { font-family: 'Inter', sans-serif; }
+        h1, h2, .serif { font-family: 'Playfair Display', serif; }
+        
+        body {
+            background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 50%, #1e1b4b 100%);
+            min-height: 100vh;
+        }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .risk-critical { border-left: 4px solid #ef4444; background: rgba(239, 68, 68, 0.1); }
+        .risk-high { border-left: 4px solid #f97316; background: rgba(249, 115, 22, 0.1); }
+        .risk-medium { border-left: 4px solid #eab308; background: rgba(234, 179, 8, 0.1); }
+        .risk-low { border-left: 4px solid #22c55e; background: rgba(34, 197, 94, 0.1); }
+        
+        .compliance-compliant { color: #22c55e; }
+        .compliance-partial { color: #eab308; }
+        .compliance-non_compliant { color: #ef4444; }
+        
+        textarea:focus, input:focus, select:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+        
+        .state-node {
+            transition: all 0.3s ease;
+        }
+        
+        .state-node.active {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        const API_BASE = '';
+        
+        // API functions
+        const api = {
+            async analyze(text, compareToStandard, frameworks) {
+                const res = await fetch(`${API_BASE}/api/analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, compare_to_standard: compareToStandard, frameworks }),
+                });
+                return res.json();
+            },
+            
+            async getAnalysisStatus(jobId) {
+                const res = await fetch(`${API_BASE}/api/analysis/${jobId}`);
+                return res.json();
+            },
+            
+            async classify(text) {
+                const res = await fetch(`${API_BASE}/api/classify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text }),
+                });
+                return res.json();
+            },
+            
+            async getSample(type) {
+                const res = await fetch(`${API_BASE}/api/sample/${type}`);
+                return res.json();
+            },
+        };
+        
+        // Components
+        function Header() {
+            return (
+                <header className="py-6 border-b border-white/10">
+                    <div className="container mx-auto px-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                                <div className="text-4xl">⚖️</div>
+                                <div>
+                                    <h1 className="text-3xl font-bold text-white serif">Legal Document Analyzer</h1>
+                                    <p className="text-sm text-gray-400">AI-Powered Contract Analysis</p>
+                                </div>
+                            </div>
+                            
+                            <div className="flex items-center space-x-2">
+                                <span className="px-3 py-1 bg-indigo-500/20 text-indigo-300 text-sm rounded-full">
+                                    LangGraph State Machine
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+            );
+        }
+        
+        function StateMachine({ currentState }) {
+            const states = [
+                { id: 'upload', label: '📄 Upload', color: 'gray' },
+                { id: 'parse', label: '📝 Parse', color: 'gray' },
+                { id: 'classify', label: '🏷️ Classify', color: 'gray' },
+                { id: 'analyze', label: '🔍 Analyze', color: 'indigo' },
+                { id: 'risk_assess', label: '⚠️ Risk', color: 'orange' },
+                { id: 'compliance_check', label: '✅ Compliance', color: 'green' },
+                { id: 'compare', label: '⚖️ Compare', color: 'blue' },
+                { id: 'report', label: '📊 Report', color: 'purple' },
+            ];
+            
+            return (
+                <div className="glass rounded-xl p-4 mb-6">
+                    <h3 className="text-sm font-semibold text-gray-400 mb-3">Pipeline State Machine</h3>
+                    <div className="flex items-center justify-between">
+                        {states.map((state, i) => (
+                            <React.Fragment key={state.id}>
+                                <div className={`state-node px-3 py-2 rounded-lg text-xs font-medium ${
+                                    currentState === state.id 
+                                        ? 'active bg-indigo-500 text-white' 
+                                        : 'bg-gray-800 text-gray-400'
+                                }`}>
+                                    {state.label}
+                                </div>
+                                {i < states.length - 1 && (
+                                    <div className="text-gray-600">→</div>
+                                )}
+                            </React.Fragment>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+        
+        function DocumentInput({ onAnalyze, loading }) {
+            const [text, setText] = useState('');
+            const [compareToStandard, setCompareToStandard] = useState(true);
+            const [frameworks, setFrameworks] = useState(['GDPR', 'CCPA']);
+            
+            const loadSample = async (type) => {
+                try {
+                    const data = await api.getSample(type);
+                    setText(data.text);
+                } catch (err) {
+                    console.error(err);
+                }
+            };
+            
+            return (
+                <div className="glass rounded-xl p-6">
+                    <h3 className="text-lg font-semibold text-white mb-4">📄 Document Input</h3>
+                    
+                    <div className="mb-4">
+                        <div className="flex gap-2 mb-3">
+                            <button
+                                onClick={() => loadSample('saas')}
+                                className="px-3 py-1 bg-indigo-500/20 text-indigo-300 text-xs rounded hover:bg-indigo-500/30"
+                            >
+                                Load SaaS Sample
+                            </button>
+                            <button
+                                onClick={() => loadSample('nda')}
+                                className="px-3 py-1 bg-indigo-500/20 text-indigo-300 text-xs rounded hover:bg-indigo-500/30"
+                            >
+                                Load NDA Sample
+                            </button>
+                            <button
+                                onClick={() => loadSample('employment')}
+                                className="px-3 py-1 bg-indigo-500/20 text-indigo-300 text-xs rounded hover:bg-indigo-500/30"
+                            >
+                                Load Employment Sample
+                            </button>
+                        </div>
+                        
+                        <textarea
+                            value={text}
+                            onChange={(e) => setText(e.target.value)}
+                            placeholder="Paste your legal document here..."
+                            className="w-full h-64 bg-black/30 border border-white/20 rounded-xl px-4 py-3 text-gray-200 placeholder-gray-500 text-sm"
+                        />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                            <label className="flex items-center space-x-2 text-gray-400 text-sm">
+                                <input
+                                    type="checkbox"
+                                    checked={compareToStandard}
+                                    onChange={(e) => setCompareToStandard(e.target.checked)}
+                                    className="rounded"
+                                />
+                                <span>Compare to standard</span>
+                            </label>
+                        </div>
+                        
+                        <button
+                            onClick={() => onAnalyze(text, compareToStandard, frameworks)}
+                            disabled={loading || !text.trim()}
+                            className="bg-indigo-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-indigo-600 disabled:opacity-50 transition-colors"
+                        >
+                            {loading ? '⚙️ Analyzing...' : '⚖️ Analyze Document'}
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+        
+        function RiskCard({ risk }) {
+            const levelEmoji = {
+                critical: '🔴',
+                high: '🟠',
+                medium: '🟡',
+                low: '🟢',
+            };
+            
+            return (
+                <div className={`risk-${risk.level} rounded-lg p-4`}>
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="font-semibold text-white">{risk.title}</span>
+                        <span className="text-sm">{levelEmoji[risk.level]} {risk.level.toUpperCase()}</span>
+                    </div>
+                    <p className="text-gray-300 text-sm mb-2">{risk.description}</p>
+                    <p className="text-indigo-300 text-xs">💡 {risk.recommendation}</p>
+                </div>
+            );
+        }
+        
+        function AnalysisResult({ result }) {
+            if (!result) return null;
+            
+            return (
+                <div className="space-y-6">
+                    {/* Overview */}
+                    <div className="glass rounded-xl p-6">
+                        <h3 className="text-lg font-semibold text-white mb-4">📋 Document Overview</h3>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="bg-black/30 rounded-lg p-4">
+                                <div className="text-gray-400 text-sm">Type</div>
+                                <div className="text-white font-semibold">{result.document_type}</div>
+                            </div>
+                            <div className="bg-black/30 rounded-lg p-4">
+                                <div className="text-gray-400 text-sm">Confidence</div>
+                                <div className="text-white font-semibold">
+                                    {(result.classification_confidence * 100).toFixed(0)}%
+                                </div>
+                            </div>
+                            <div className="bg-black/30 rounded-lg p-4">
+                                <div className="text-gray-400 text-sm">Words</div>
+                                <div className="text-white font-semibold">{result.word_count?.toLocaleString()}</div>
+                            </div>
+                            <div className="bg-black/30 rounded-lg p-4">
+                                <div className="text-gray-400 text-sm">Risk Score</div>
+                                <div className={`font-semibold ${
+                                    result.risk_assessment?.risk_score > 50 ? 'text-red-400' :
+                                    result.risk_assessment?.risk_score > 25 ? 'text-yellow-400' : 'text-green-400'
+                                }`}>
+                                    {result.risk_assessment?.risk_score}/100
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {result.plain_english_summary && (
+                            <div className="mt-4 p-4 bg-indigo-500/10 rounded-lg">
+                                <div className="text-indigo-300 text-sm font-semibold mb-2">📝 Plain English Summary</div>
+                                <p className="text-gray-300 text-sm">{result.plain_english_summary}</p>
+                            </div>
+                        )}
+                    </div>
+                    
+                    {/* Key Terms */}
+                    {result.terms && (
+                        <div className="glass rounded-xl p-6">
+                            <h3 className="text-lg font-semibold text-white mb-4">📌 Key Terms</h3>
+                            <div className="grid grid-cols-2 gap-3">
+                                {result.terms.parties?.map((party, i) => (
+                                    <div key={i} className="bg-black/30 rounded-lg p-3">
+                                        <div className="text-gray-400 text-xs">Party {i + 1}</div>
+                                        <div className="text-white text-sm">{party.name} ({party.role})</div>
+                                    </div>
+                                ))}
+                                {result.terms.term_length && (
+                                    <div className="bg-black/30 rounded-lg p-3">
+                                        <div className="text-gray-400 text-xs">Term</div>
+                                        <div className="text-white text-sm">{result.terms.term_length}</div>
+                                    </div>
+                                )}
+                                {result.terms.governing_law && (
+                                    <div className="bg-black/30 rounded-lg p-3">
+                                        <div className="text-gray-400 text-xs">Governing Law</div>
+                                        <div className="text-white text-sm">{result.terms.governing_law}</div>
+                                    </div>
+                                )}
+                                {result.terms.liability_cap && (
+                                    <div className="bg-black/30 rounded-lg p-3">
+                                        <div className="text-gray-400 text-xs">Liability Cap</div>
+                                        <div className="text-white text-sm">{result.terms.liability_cap}</div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* Risk Assessment */}
+                    {result.risk_assessment?.risks?.length > 0 && (
+                        <div className="glass rounded-xl p-6">
+                            <h3 className="text-lg font-semibold text-white mb-4">
+                                ⚠️ Risk Assessment
+                                <span className="ml-2 text-sm font-normal text-gray-400">
+                                    ({result.risk_assessment.critical} critical, {result.risk_assessment.high} high)
+                                </span>
+                            </h3>
+                            <div className="space-y-3">
+                                {result.risk_assessment.risks.slice(0, 5).map((risk, i) => (
+                                    <RiskCard key={i} risk={risk} />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* Compliance */}
+                    {result.compliance && (
+                        <div className="glass rounded-xl p-6">
+                            <h3 className="text-lg font-semibold text-white mb-4">✅ Compliance Status</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                {Object.entries(result.compliance.framework_status || {}).map(([fw, status]) => (
+                                    <div key={fw} className="bg-black/30 rounded-lg p-3 text-center">
+                                        <div className={`text-2xl mb-1 compliance-${status}`}>
+                                            {status === 'compliant' ? '✅' : status === 'partial' ? '⚠️' : '❌'}
+                                        </div>
+                                        <div className="text-white font-semibold">{fw}</div>
+                                        <div className={`text-xs compliance-${status}`}>
+                                            {status.replace('_', ' ')}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* Negotiation Suggestions */}
+                    {result.negotiation_suggestions?.length > 0 && (
+                        <div className="glass rounded-xl p-6">
+                            <h3 className="text-lg font-semibold text-white mb-4">🤝 Negotiation Suggestions</h3>
+                            <div className="space-y-3">
+                                {result.negotiation_suggestions.map((suggestion, i) => (
+                                    <div key={i} className="bg-black/30 rounded-lg p-4">
+                                        <div className="flex items-center space-x-2 mb-2">
+                                            <span className="bg-indigo-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">
+                                                {suggestion.priority}
+                                            </span>
+                                            <span className="text-white font-semibold">{suggestion.issue}</span>
+                                        </div>
+                                        <p className="text-gray-400 text-sm">{suggestion.suggestion}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+        
+        function App() {
+            const [loading, setLoading] = useState(false);
+            const [currentState, setCurrentState] = useState('upload');
+            const [result, setResult] = useState(null);
+            
+            const handleAnalyze = async (text, compareToStandard, frameworks) => {
+                setLoading(true);
+                setResult(null);
+                setCurrentState('upload');
+                
+                try {
+                    const { job_id } = await api.analyze(text, compareToStandard, frameworks);
+                    
+                    // Simulate state progression
+                    const states = ['parse', 'classify', 'analyze', 'risk_assess', 'compliance_check', 'compare', 'report'];
+                    let stateIndex = 0;
+                    
+                    const progressInterval = setInterval(() => {
+                        if (stateIndex < states.length) {
+                            setCurrentState(states[stateIndex]);
+                            stateIndex++;
+                        }
+                    }, 500);
+                    
+                    // Poll for completion
+                    const pollInterval = setInterval(async () => {
+                        const status = await api.getAnalysisStatus(job_id);
+                        
+                        if (status.status === 'complete') {
+                            clearInterval(pollInterval);
+                            clearInterval(progressInterval);
+                            setCurrentState('report');
+                            setResult(status.result);
+                            setLoading(false);
+                        } else if (status.status === 'error') {
+                            clearInterval(pollInterval);
+                            clearInterval(progressInterval);
+                            setLoading(false);
+                            alert('Error: ' + status.error);
+                        }
+                    }, 1000);
+                } catch (err) {
+                    setLoading(false);
+                    console.error(err);
+                }
+            };
+            
+            return (
+                <div className="min-h-screen text-white">
+                    <Header />
+                    
+                    <main className="container mx-auto px-4 py-6">
+                        <StateMachine currentState={currentState} />
+                        
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div>
+                                <DocumentInput onAnalyze={handleAnalyze} loading={loading} />
+                            </div>
+                            
+                            <div>
+                                {loading && (
+                                    <div className="glass rounded-xl p-12 text-center">
+                                        <div className="text-6xl mb-4">⚖️</div>
+                                        <div className="text-xl font-semibold mb-2">Analyzing Document...</div>
+                                        <div className="text-gray-400">
+                                            Extracting terms, assessing risks, checking compliance...
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {!loading && !result && (
+                                    <div className="glass rounded-xl p-12 text-center">
+                                        <div className="text-6xl mb-4">📄</div>
+                                        <div className="text-xl font-semibold mb-2">Ready to Analyze</div>
+                                        <div className="text-gray-400">
+                                            Paste a legal document or load a sample to begin analysis
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        
+                        {result && (
+                            <div className="mt-6">
+                                <AnalysisResult result={result} />
+                            </div>
+                        )}
+                    </main>
+                    
+                    <footer className="border-t border-white/10 py-4 mt-8">
+                        <div className="container mx-auto px-4 text-center text-gray-500 text-sm">
+                            ⚖️ Legal Document Analyzer • LangGraph State Machine • AI-Powered
+                        </div>
+                    </footer>
+                </div>
+            );
+        }
+        
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
