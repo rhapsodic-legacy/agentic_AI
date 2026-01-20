@@ -1,5 +1,5 @@
 """
-Legal Document Analyzer - LangGraph Pipeline
+Legal Document Analyzer - LangGraph Pipeline 
 
 State Machine architecture for legal document analysis.
 
