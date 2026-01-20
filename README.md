@@ -26,3 +26,8 @@ A **CrewAI** powered personal shopping assistant that understands preferences, s
 
 ### 8) DevOps Incident Response System 
 An **AutoGen** powered autonomous incident response system that detects issues, diagnoses root causes, implements fixes, and coordinates communication during outages.
+
+### 9) Legal Document Analyzer
+ A **LangGraph** powered state machine for analyzing legal documents, extracting key terms, identifying risks, and ensuring compliance.
+
+ *Disclaimer: This is for educational purposes only and not legal advice.*
