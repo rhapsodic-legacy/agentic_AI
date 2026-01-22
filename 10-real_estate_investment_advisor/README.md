@@ -234,3 +234,5 @@ advisor = RealEstateAdvisor(config)
 ## 📝 License
 
 MIT License
+
+*Disclaimer: This is for educational purposes only and not investment advice.*
