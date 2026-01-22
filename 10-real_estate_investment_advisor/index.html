@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏠 Real Estate Investment Advisor</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * { font-family: 'Inter', sans-serif; }
+        
+        body {
+            background: linear-gradient(135deg, #1a365d 0%, #0f172a 50%, #064e3b 100%);
+            min-height: 100vh;
+        }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .strong-buy { background: linear-gradient(135deg, #059669, #10b981); }
+        .buy { background: linear-gradient(135deg, #22c55e, #4ade80); }
+        .hold { background: linear-gradient(135deg, #eab308, #facc15); }
+        .avoid { background: linear-gradient(135deg, #ef4444, #f87171); }
+        
+        .risk-low { color: #22c55e; }
+        .risk-medium { color: #eab308; }
+        .risk-high { color: #ef4444; }
+        
+        .metric-card {
+            transition: all 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        const API_BASE = '';
+        
+        // API functions
+        const api = {
+            async getMarkets() {
+                const res = await fetch(`${API_BASE}/api/markets`);
+                return res.json();
+            },
+            
+            async getProperties(city) {
+                const res = await fetch(`${API_BASE}/api/properties/${city}`);
+                return res.json();
+            },
+            
+            async analyze(propertyId, downPayment, rate) {
+                const res = await fetch(`${API_BASE}/api/analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        property_id: propertyId,
+                        down_payment_pct: downPayment,
+                        interest_rate: rate,
+                    }),
+                });
+                return res.json();
+            },
+            
+            async getAnalysisStatus(jobId) {
+                const res = await fetch(`${API_BASE}/api/analysis/${jobId}`);
+                return res.json();
+            },
+        };
+        
+        // Components
+        function Header() {
+            return (
+                <header className="py-6 border-b border-white/10">
+                    <div className="container mx-auto px-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                                <div className="text-4xl">🏠</div>
+                                <div>
+                                    <h1 className="text-3xl font-bold text-white">Real Estate Advisor</h1>
+                                    <p className="text-sm text-gray-400">AI-Powered Investment Analysis</p>
+                                </div>
+                            </div>
+                            
+                            <div className="flex items-center space-x-2">
+                                <span className="px-3 py-1 bg-green-500/20 text-green-300 text-sm rounded-full">
+                                    Supervisor Pattern
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+            );
+        }
+        
+        function AgentVisualization() {
+            const agents = [
+                { name: 'Market Analyst', emoji: '📊', tasks: ['Demographics', 'Trends', 'Supply/Demand'] },
+                { name: 'Property Evaluator', emoji: '🏠', tasks: ['Comps', 'Condition', 'Valuation'] },
+                { name: 'Financial Modeler', emoji: '💰', tasks: ['Cash Flow', 'ROI/IRR', 'Cap Rate'] },
+                { name: 'Risk Assessor', emoji: '⚠️', tasks: ['Vacancy', 'Market', 'Condition'] },
+                { name: 'Legal Checker', emoji: '⚖️', tasks: ['Zoning', 'Permits', 'Title'] },
+            ];
+            
+            return (
+                <div className="glass rounded-xl p-4 mb-6">
+                    <div className="text-center mb-4">
+                        <div className="text-lg font-semibold text-white">👔 Supervisor</div>
+                        <div className="text-xs text-gray-400">Query Router</div>
+                    </div>
+                    <div className="grid grid-cols-5 gap-2">
+                        {agents.map(agent => (
+                            <div key={agent.name} className="text-center p-2 bg-black/30 rounded-lg">
+                                <div className="text-2xl mb-1">{agent.emoji}</div>
+                                <div className="text-xs text-white font-medium">{agent.name}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+        
+        function MarketCard({ market, selected, onSelect }) {
+            return (
+                <div 
+                    onClick={() => onSelect(market.city)}
+                    className={`glass rounded-lg p-4 cursor-pointer transition-all ${
+                        selected ? 'ring-2 ring-green-500' : 'hover:bg-white/10'
+                    }`}
+                >
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="font-semibold text-white">{market.city}</span>
+                        <span className="text-xs text-gray-400">{market.state}</span>
+                    </div>
+                    <div className="text-xs text-gray-400 space-y-1">
+                        <div>Median: ${market.median_price?.toLocaleString()}</div>
+                        <div className={market.price_change > 0 ? 'text-green-400' : 'text-red-400'}>
+                            {market.price_change > 0 ? '↑' : '↓'} {Math.abs(market.price_change)}% YoY
+                        </div>
+                        <div>Score: {market.investment_score}/100</div>
+                    </div>
+                </div>
+            );
+        }
+        
+        function PropertyCard({ property, onAnalyze }) {
+            return (
+                <div className="glass rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-2">
+                        <div>
+                            <div className="font-semibold text-white">${property.price?.toLocaleString()}</div>
+                            <div className="text-xs text-gray-400">{property.address}</div>
+                        </div>
+                        <span className="text-xs bg-green-500/20 text-green-300 px-2 py-1 rounded">
+                            {property.type}
+                        </span>
+                    </div>
+                    <div className="text-xs text-gray-400 mb-3">
+                        {property.bedrooms}BR/{property.bathrooms}BA • {property.sqft?.toLocaleString()} sqft
+                    </div>
+                    <button
+                        onClick={() => onAnalyze(property.property_id)}
+                        className="w-full bg-green-500/20 text-green-300 text-sm py-2 rounded hover:bg-green-500/30 transition-colors"
+                    >
+                        Analyze →
+                    </button>
+                </div>
+            );
+        }
+        
+        function MetricCard({ label, value, subValue, color = 'green' }) {
+            return (
+                <div className={`metric-card bg-black/30 rounded-lg p-4`}>
+                    <div className="text-xs text-gray-400 mb-1">{label}</div>
+                    <div className={`text-xl font-bold text-${color}-400`}>{value}</div>
+                    {subValue && <div className="text-xs text-gray-500">{subValue}</div>}
+                </div>
+            );
+        }
+        
+        function RecommendationBadge({ recommendation }) {
+            const styles = {
+                'Strong Buy': 'strong-buy',
+                'Buy': 'buy',
+                'Hold': 'hold',
+                'Avoid': 'avoid',
+                'Strong Avoid': 'avoid',
+            };
+            
+            return (
+                <span className={`px-4 py-2 rounded-lg text-white font-bold ${styles[recommendation] || 'hold'}`}>
+                    {recommendation}
+                </span>
+            );
+        }
+        
+        function AnalysisResult({ result }) {
+            if (!result) return null;
+            
+            const riskColors = { low: 'green', medium: 'yellow', high: 'red' };
+            
+            return (
+                <div className="space-y-6">
+                    {/* Header */}
+                    <div className="glass rounded-xl p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h2 className="text-xl font-bold text-white">Investment Analysis</h2>
+                                <p className="text-gray-400">{result.property?.address}</p>
+                            </div>
+                            <RecommendationBadge recommendation={result.recommendation} />
+                        </div>
+                        
+                        <p className="text-gray-300">{result.recommendation_summary}</p>
+                    </div>
+                    
+                    {/* Metrics Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <MetricCard 
+                            label="List Price" 
+                            value={`$${result.property?.price?.toLocaleString()}`} 
+                        />
+                        <MetricCard 
+                            label="Estimated Value" 
+                            value={`$${result.valuation?.estimated_value?.toLocaleString()}`}
+                            subValue={`±${((result.valuation?.high - result.valuation?.low) / 2 / result.valuation?.estimated_value * 100).toFixed(0)}%`}
+                        />
+                        <MetricCard 
+                            label="Cap Rate" 
+                            value={`${result.financials?.cap_rate?.toFixed(1)}%`}
+                            color={result.financials?.cap_rate > 5 ? 'green' : 'yellow'}
+                        />
+                        <MetricCard 
+                            label="Cash-on-Cash" 
+                            value={`${result.financials?.cash_on_cash?.toFixed(1)}%`}
+                            color={result.financials?.cash_on_cash > 7 ? 'green' : 'yellow'}
+                        />
+                        <MetricCard 
+                            label="Monthly Rent" 
+                            value={`$${result.financials?.monthly_rent?.toLocaleString()}`}
+                        />
+                        <MetricCard 
+                            label="NOI" 
+                            value={`$${result.financials?.noi?.toLocaleString()}`}
+                        />
+                        <MetricCard 
+                            label="GRM" 
+                            value={result.financials?.grm?.toFixed(1)}
+                        />
+                        <MetricCard 
+                            label="Risk Score" 
+                            value={`${result.risk_score}/100`}
+                            color={riskColors[result.risk_level] || 'yellow'}
+                        />
+                    </div>
+                    
+                    {/* Pros and Cons */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {result.pros?.length > 0 && (
+                            <div className="glass rounded-xl p-6">
+                                <h3 className="text-lg font-semibold text-green-400 mb-3">✅ Pros</h3>
+                                <ul className="space-y-2">
+                                    {result.pros.map((pro, i) => (
+                                        <li key={i} className="text-gray-300 text-sm">• {pro}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                        
+                        {result.cons?.length > 0 && (
+                            <div className="glass rounded-xl p-6">
+                                <h3 className="text-lg font-semibold text-red-400 mb-3">⚠️ Cons</h3>
+                                <ul className="space-y-2">
+                                    {result.cons.map((con, i) => (
+                                        <li key={i} className="text-gray-300 text-sm">• {con}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                    </div>
+                    
+                    {/* Suggested Offer */}
+                    {result.suggested_offer > 0 && (
+                        <div className="glass rounded-xl p-6 text-center">
+                            <div className="text-gray-400 mb-2">Suggested Offer</div>
+                            <div className="text-3xl font-bold text-green-400">
+                                ${result.suggested_offer?.toLocaleString()}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+        
+        function App() {
+            const [markets, setMarkets] = useState([]);
+            const [selectedCity, setSelectedCity] = useState(null);
+            const [properties, setProperties] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [result, setResult] = useState(null);
+            const [downPayment, setDownPayment] = useState(0.25);
+            const [rate, setRate] = useState(0.07);
+            
+            useEffect(() => {
+                loadMarkets();
+            }, []);
+            
+            useEffect(() => {
+                if (selectedCity) {
+                    loadProperties(selectedCity);
+                }
+            }, [selectedCity]);
+            
+            const loadMarkets = async () => {
+                try {
+                    const data = await api.getMarkets();
+                    setMarkets(data.markets || []);
+                } catch (err) {
+                    console.error(err);
+                }
+            };
+            
+            const loadProperties = async (city) => {
+                try {
+                    const data = await api.getProperties(city);
+                    setProperties(data.properties || []);
+                } catch (err) {
+                    console.error(err);
+                }
+            };
+            
+            const handleAnalyze = async (propertyId) => {
+                setLoading(true);
+                setResult(null);
+                
+                try {
+                    const { job_id } = await api.analyze(propertyId, downPayment, rate);
+                    
+                    // Poll for completion
+                    const pollInterval = setInterval(async () => {
+                        const status = await api.getAnalysisStatus(job_id);
+                        
+                        if (status.status === 'complete') {
+                            clearInterval(pollInterval);
+                            setResult(status.result);
+                            setLoading(false);
+                        } else if (status.status === 'error') {
+                            clearInterval(pollInterval);
+                            setLoading(false);
+                            alert('Error: ' + status.error);
+                        }
+                    }, 1000);
+                } catch (err) {
+                    setLoading(false);
+                    console.error(err);
+                }
+            };
+            
+            return (
+                <div className="min-h-screen text-white">
+                    <Header />
+                    
+                    <main className="container mx-auto px-4 py-6">
+                        <AgentVisualization />
+                        
+                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                            {/* Sidebar */}
+                            <div className="space-y-6">
+                                {/* Markets */}
+                                <div className="glass rounded-xl p-4">
+                                    <h3 className="text-sm font-semibold text-gray-400 mb-3">📍 Markets</h3>
+                                    <div className="space-y-2">
+                                        {markets.map(market => (
+                                            <MarketCard 
+                                                key={market.city}
+                                                market={market}
+                                                selected={selectedCity === market.city}
+                                                onSelect={setSelectedCity}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                                
+                                {/* Settings */}
+                                <div className="glass rounded-xl p-4">
+                                    <h3 className="text-sm font-semibold text-gray-400 mb-3">⚙️ Analysis Settings</h3>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="text-xs text-gray-400">Down Payment</label>
+                                            <select
+                                                value={downPayment}
+                                                onChange={(e) => setDownPayment(parseFloat(e.target.value))}
+                                                className="w-full bg-black/50 border border-white/20 rounded px-2 py-1 text-sm"
+                                            >
+                                                <option value={0.20}>20%</option>
+                                                <option value={0.25}>25%</option>
+                                                <option value={0.30}>30%</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-gray-400">Interest Rate</label>
+                                            <select
+                                                value={rate}
+                                                onChange={(e) => setRate(parseFloat(e.target.value))}
+                                                className="w-full bg-black/50 border border-white/20 rounded px-2 py-1 text-sm"
+                                            >
+                                                <option value={0.065}>6.5%</option>
+                                                <option value={0.07}>7.0%</option>
+                                                <option value={0.075}>7.5%</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* Main Content */}
+                            <div className="lg:col-span-3 space-y-6">
+                                {/* Properties */}
+                                {selectedCity && properties.length > 0 && !result && (
+                                    <div>
+                                        <h2 className="text-lg font-semibold text-white mb-4">
+                                            Properties in {selectedCity}
+                                        </h2>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            {properties.slice(0, 6).map(prop => (
+                                                <PropertyCard 
+                                                    key={prop.property_id}
+                                                    property={prop}
+                                                    onAnalyze={handleAnalyze}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {/* Loading */}
+                                {loading && (
+                                    <div className="glass rounded-xl p-12 text-center">
+                                        <div className="text-6xl mb-4">🏠</div>
+                                        <div className="text-xl font-semibold mb-2">Analyzing Property...</div>
+                                        <div className="text-gray-400">
+                                            Our AI agents are evaluating the investment potential
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {/* No Selection */}
+                                {!selectedCity && !loading && (
+                                    <div className="glass rounded-xl p-12 text-center">
+                                        <div className="text-6xl mb-4">📍</div>
+                                        <div className="text-xl font-semibold mb-2">Select a Market</div>
+                                        <div className="text-gray-400">
+                                            Choose a market from the sidebar to browse properties
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {/* Results */}
+                                {result && (
+                                    <div>
+                                        <button
+                                            onClick={() => setResult(null)}
+                                            className="mb-4 text-gray-400 hover:text-white"
+                                        >
+                                            ← Back to properties
+                                        </button>
+                                        <AnalysisResult result={result} />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </main>
+                    
+                    <footer className="border-t border-white/10 py-4 mt-8">
+                        <div className="container mx-auto px-4 text-center text-gray-500 text-sm">
+                            🏠 Real Estate Investment Advisor • Supervisor Pattern • FastAPI + LangChain
+                        </div>
+                    </footer>
+                </div>
+            );
+        }
+        
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
