@@ -31,3 +31,10 @@ An **AutoGen** powered autonomous incident response system that detects issues, 
  A **LangGraph** powered state machine for analyzing legal documents, extracting key terms, identifying risks, and ensuring compliance.
 
  *Disclaimer: This is for educational purposes only and not legal advice.*
+
+### 10) Real Estate Investment Advisor
+ An AI advisor that analyzes real estate markets, evaluates properties, calculates ROI, and provides investment recommendations using a **Supervisor Pattern** architecture.
+
+ *Disclaimer: This is for educational purposes only and not investment advice.*
+
+
