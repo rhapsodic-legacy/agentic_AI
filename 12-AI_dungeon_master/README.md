@@ -325,3 +325,6 @@ MIT License
 ---
 
 *May your dice roll true, adventurer!* 🎲⚔️🐉
+
+
+*Note: Work in progress. Agentic AI implementation for AI npc's to come.*
