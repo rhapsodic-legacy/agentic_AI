@@ -39,3 +39,10 @@ An **AutoGen** powered autonomous incident response system that detects issues, 
 
 ### 11) Scientific Experiment Designer
  An AI system that designs scientific experiments, predicts outcomes, suggests controls, identifies confounding variables, and generates protocols using **AutoGen** with **Nested Team Architecture**.
+
+### 12) AI Dungeon Master
+ An AI powered Dungeon Master that runs tabletop RPG campaigns with dynamic storytelling, NPC management, D&D 5e combat rules, and persistent world state.
+
+ *Note: Work in progress. Agentic AI implementation for AI npc's to come.*
+
+
