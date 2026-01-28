@@ -45,4 +45,5 @@ An **AutoGen** powered autonomous incident response system that detects issues, 
 
  *Note: Work in progress. Agentic AI implementation for AI npc's to come.*
 
-
+### 13) Supply Chain Optimizer
+ An end to end supply chain optimization system using a hierarchical multi-agent architecture. Handles demand forecasting, inventory management, supplier selection, and logistics planning.
