@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📦 Supply Chain Optimizer</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.5.0/Recharts.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * { font-family: 'Inter', sans-serif; }
+        
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            min-height: 100vh;
+        }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .glass-dark {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+        
+        .status-healthy { color: #22c55e; }
+        .status-warning { color: #eab308; }
+        .status-critical { color: #ef4444; }
+        
+        .hierarchy-line {
+            border-left: 2px dashed rgba(59, 130, 246, 0.3);
+        }
+        
+        @keyframes pulse-blue {
+            0%, 100% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.6); }
+        }
+        
+        .pulse-active {
+            animation: pulse-blue 2s infinite;
+        }
+        
+        .progress-bar {
+            background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%);
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(59, 130, 246, 0.5); border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useCallback } = React;
+        
+        const API_BASE = '';
+        
+        // =================================================================
+        // API Functions
+        // =================================================================
+        const api = {
+            async getStatus() {
+                const res = await fetch(`${API_BASE}/api/status`);
+                return res.json();
+            },
+            async getProducts() {
+                const res = await fetch(`${API_BASE}/api/products`);
+                return res.json();
+            },
+            async getSuppliers() {
+                const res = await fetch(`${API_BASE}/api/suppliers`);
+                return res.json();
+            },
+            async getInventory() {
+                const res = await fetch(`${API_BASE}/api/inventory`);
+                return res.json();
+            },
+            async getKPIs() {
+                const res = await fetch(`${API_BASE}/api/kpis`);
+                return res.json();
+            },
+            async getHierarchy() {
+                const res = await fetch(`${API_BASE}/api/hierarchy`);
+                return res.json();
+            },
+            async startOptimization(params) {
+                const res = await fetch(`${API_BASE}/api/optimize`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(params),
+                });
+                return res.json();
+            },
+            async getOptimizationStatus(jobId) {
+                const res = await fetch(`${API_BASE}/api/optimize/${jobId}`);
+                return res.json();
+            },
+            async getRecommendations() {
+                const res = await fetch(`${API_BASE}/api/recommendations`);
+                return res.json();
+            },
+            async runScenario(params) {
+                const res = await fetch(`${API_BASE}/api/scenario`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(params),
+                });
+                return res.json();
+            },
+        };
+        
+        // =================================================================
+        // Components
+        // =================================================================
+        
+        function Header() {
+            return (
+                <div className="glass-dark p-4 mb-6">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="text-4xl">📦</div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-white">Supply Chain Optimizer</h1>
+                                <p className="text-gray-400 text-sm">Hierarchical Multi-Agent Optimization System</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-sm">
+                                ● System Online
+                            </div>
+                            <div className="text-gray-400 text-sm">
+                                {new Date().toLocaleDateString()}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        
+        function MetricCard({ title, value, change, icon, trend }) {
+            const trendColor = trend === 'up' ? 'text-green-400' : trend === 'down' ? 'text-red-400' : 'text-gray-400';
+            const trendIcon = trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→';
+            
+            return (
+                <div className="metric-card rounded-xl p-4">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <div className="text-gray-400 text-sm mb-1">{title}</div>
+                            <div className="text-2xl font-bold text-white">{value}</div>
+                            {change && (
+                                <div className={`text-sm mt-1 ${trendColor}`}>
+                                    {trendIcon} {change}
+                                </div>
+                            )}
+                        </div>
+                        <div className="text-3xl opacity-50">{icon}</div>
+                    </div>
+                </div>
+            );
+        }
+        
+        function KPIDashboard({ kpis }) {
+            if (!kpis) return null;
+            
+            return (
+                <div className="grid grid-cols-4 gap-4 mb-6">
+                    <MetricCard 
+                        title="Inventory Value" 
+                        value={`$${(kpis.inventory?.total_value / 1000000).toFixed(2)}M`}
+                        change="12% reduction target"
+                        icon="📊"
+                        trend="down"
+                    />
+                    <MetricCard 
+                        title="Fill Rate" 
+                        value={`${kpis.performance?.fill_rate || 94.5}%`}
+                        change="+2.3% vs last month"
+                        icon="📦"
+                        trend="up"
+                    />
+                    <MetricCard 
+                        title="Supplier Score" 
+                        value={kpis.suppliers?.avg_score || 85}
+                        change={`${kpis.suppliers?.high_risk_count || 0} high risk`}
+                        icon="🏭"
+                        trend="up"
+                    />
+                    <MetricCard 
+                        title="OTIF Rate" 
+                        value={`${kpis.performance?.otif_rate || 91.2}%`}
+                        change="+1.5% vs target"
+                        icon="🚚"
+                        trend="up"
+                    />
+                </div>
+            );
+        }
+        
+        function HierarchyVisualization({ activePhase }) {
+            const phases = {
+                'demand': 0,
+                'inventory': 1,
+                'logistics': 2,
+                'strategic': 3,
+            };
+            
+            const currentPhase = phases[activePhase] ?? -1;
+            
+            return (
+                <div className="glass rounded-xl p-6 mb-6">
+                    <h3 className="text-lg font-semibold text-white mb-4">Agent Hierarchy</h3>
+                    
+                    {/* Strategic Level */}
+                    <div className="flex justify-center mb-6">
+                        <div className={`glass px-6 py-3 rounded-lg text-center ${currentPhase === 3 ? 'pulse-active border-blue-500' : ''}`}>
+                            <div className="text-2xl mb-1">🏢</div>
+                            <div className="text-white font-medium">Supply Chain Director</div>
+                            <div className="text-gray-400 text-xs">Strategic Decisions</div>
+                        </div>
+                    </div>
+                    
+                    {/* Connection line */}
+                    <div className="flex justify-center mb-2">
+                        <div className="w-px h-8 bg-blue-500/30"></div>
+                    </div>
+                    
+                    {/* Tactical Level */}
+                    <div className="flex justify-center gap-8 mb-6">
+                        <div className={`glass px-4 py-3 rounded-lg text-center ${currentPhase === 0 ? 'pulse-active border-blue-500' : ''}`}>
+                            <div className="text-xl mb-1">📊</div>
+                            <div className="text-white font-medium text-sm">Demand Planning</div>
+                            <div className="text-gray-400 text-xs">Manager</div>
+                        </div>
+                        <div className={`glass px-4 py-3 rounded-lg text-center ${currentPhase === 1 ? 'pulse-active border-blue-500' : ''}`}>
+                            <div className="text-xl mb-1">📦</div>
+                            <div className="text-white font-medium text-sm">Inventory Mgmt</div>
+                            <div className="text-gray-400 text-xs">Manager</div>
+                        </div>
+                        <div className={`glass px-4 py-3 rounded-lg text-center ${currentPhase === 2 ? 'pulse-active border-blue-500' : ''}`}>
+                            <div className="text-xl mb-1">🚛</div>
+                            <div className="text-white font-medium text-sm">Logistics Planning</div>
+                            <div className="text-gray-400 text-xs">Manager</div>
+                        </div>
+                    </div>
+                    
+                    {/* Connection lines */}
+                    <div className="flex justify-center gap-8 mb-2">
+                        <div className="w-px h-6 bg-blue-500/20"></div>
+                        <div className="w-px h-6 bg-blue-500/20"></div>
+                        <div className="w-px h-6 bg-blue-500/20"></div>
+                    </div>
+                    
+                    {/* Operational Level */}
+                    <div className="flex justify-center gap-4">
+                        {/* Demand Team */}
+                        <div className="flex gap-2">
+                            <div className="glass-dark px-3 py-2 rounded text-center">
+                                <div className="text-sm">📈</div>
+                                <div className="text-gray-300 text-xs">Forecast</div>
+                            </div>
+                            <div className="glass-dark px-3 py-2 rounded text-center">
+                                <div className="text-sm">🔍</div>
+                                <div className="text-gray-300 text-xs">Market</div>
+                            </div>
+                        </div>
+                        
+                        {/* Inventory Team */}
+                        <div className="flex gap-2">
+                            <div className="glass-dark px-3 py-2 rounded text-center">
+                                <div className="text-sm">🔄</div>
+                                <div className="text-gray-300 text-xs">Replenish</div>
+                            </div>
+                            <div className="glass-dark px-3 py-2 rounded text-center">
+                                <div className="text-sm">🛡️</div>
+                                <div className="text-gray-300 text-xs">Safety</div>
+                            </div>
+                        </div>
+                        
+                        {/* Logistics Team */}
+                        <div className="flex gap-2">
+                            <div className="glass-dark px-3 py-2 rounded text-center">
+                                <div className="text-sm">🗺️</div>
+                                <div className="text-gray-300 text-xs">Routes</div>
+                            </div>
+                            <div className="glass-dark px-3 py-2 rounded text-center">
+                                <div className="text-sm">📋</div>
+                                <div className="text-gray-300 text-xs">Carrier</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        
+        function InventoryTable({ inventory }) {
+            if (!inventory || !inventory.length) return null;
+            
+            const getStatusBadge = (status) => {
+                const styles = {
+                    'STOCKOUT': 'bg-red-500/20 text-red-400',
+                    'CRITICAL': 'bg-yellow-500/20 text-yellow-400',
+                    'REORDER': 'bg-blue-500/20 text-blue-400',
+                    'HEALTHY': 'bg-green-500/20 text-green-400',
+                    'OVERSTOCK': 'bg-purple-500/20 text-purple-400',
+                };
+                return styles[status] || 'bg-gray-500/20 text-gray-400';
+            };
+            
+            return (
+                <div className="glass rounded-xl p-4">
+                    <h3 className="text-lg font-semibold text-white mb-4">📦 Inventory Status</h3>
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="text-gray-400 text-sm border-b border-gray-700">
+                                    <th className="text-left py-2 px-3">SKU</th>
+                                    <th className="text-left py-2 px-3">Product</th>
+                                    <th className="text-right py-2 px-3">On Hand</th>
+                                    <th className="text-right py-2 px-3">Safety Stock</th>
+                                    <th className="text-right py-2 px-3">Available</th>
+                                    <th className="text-center py-2 px-3">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {inventory.slice(0, 8).map((item, i) => (
+                                    <tr key={i} className="border-b border-gray-700/50 hover:bg-white/5">
+                                        <td className="py-3 px-3 text-blue-400 font-mono text-sm">{item.sku}</td>
+                                        <td className="py-3 px-3 text-white text-sm">{item.product_name?.substring(0, 25)}</td>
+                                        <td className="py-3 px-3 text-right text-gray-300">{item.on_hand?.toLocaleString()}</td>
+                                        <td className="py-3 px-3 text-right text-gray-400">{item.safety_stock?.toLocaleString()}</td>
+                                        <td className="py-3 px-3 text-right text-gray-300">{item.available?.toLocaleString()}</td>
+                                        <td className="py-3 px-3 text-center">
+                                            <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadge(item.status)}`}>
+                                                {item.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        }
+        
+        function SupplierScorecard({ suppliers }) {
+            if (!suppliers || !suppliers.length) return null;
+            
+            return (
+                <div className="glass rounded-xl p-4">
+                    <h3 className="text-lg font-semibold text-white mb-4">🏭 Supplier Scorecard</h3>
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="text-gray-400 text-sm border-b border-gray-700">
+                                    <th className="text-left py-2 px-3">Supplier</th>
+                                    <th className="text-center py-2 px-3">Score</th>
+                                    <th className="text-center py-2 px-3">Quality</th>
+                                    <th className="text-center py-2 px-3">Delivery</th>
+                                    <th className="text-center py-2 px-3">Cost</th>
+                                    <th className="text-center py-2 px-3">Risk</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {suppliers.slice(0, 6).map((supplier, i) => (
+                                    <tr key={i} className="border-b border-gray-700/50 hover:bg-white/5">
+                                        <td className="py-3 px-3">
+                                            <div className="text-white text-sm font-medium">{supplier.name?.substring(0, 20)}</div>
+                                            <div className="text-gray-400 text-xs">{supplier.country}</div>
+                                        </td>
+                                        <td className="py-3 px-3 text-center">
+                                            <span className={`font-bold ${supplier.overall_score >= 85 ? 'text-green-400' : supplier.overall_score >= 70 ? 'text-yellow-400' : 'text-red-400'}`}>
+                                                {supplier.overall_score}
+                                            </span>
+                                        </td>
+                                        <td className="py-3 px-3 text-center text-gray-300">{supplier.quality_score}</td>
+                                        <td className="py-3 px-3 text-center text-gray-300">{supplier.delivery_score}</td>
+                                        <td className="py-3 px-3 text-center text-gray-300">{supplier.cost_score}</td>
+                                        <td className="py-3 px-3 text-center text-xl">{supplier.risk}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        }
+        
+        function OptimizationPanel({ onOptimize, optimizing, result }) {
+            return (
+                <div className="glass rounded-xl p-4">
+                    <h3 className="text-lg font-semibold text-white mb-4">⚡ Optimization Control</h3>
+                    
+                    <button
+                        onClick={onOptimize}
+                        disabled={optimizing}
+                        className={`w-full py-3 rounded-lg font-medium transition-all ${
+                            optimizing 
+                                ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
+                                : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white'
+                        }`}
+                    >
+                        {optimizing ? (
+                            <span className="flex items-center justify-center gap-2">
+                                <span className="animate-spin">⚙️</span>
+                                Running Optimization...
+                            </span>
+                        ) : (
+                            '🚀 Run Full Optimization'
+                        )}
+                    </button>
+                    
+                    {result && (
+                        <div className="mt-4 space-y-3">
+                            <div className="text-green-400 text-sm font-medium">✅ Optimization Complete</div>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="glass-dark rounded-lg p-3">
+                                    <div className="text-gray-400 text-xs">Inventory Reduction</div>
+                                    <div className="text-green-400 font-bold">{result.inventory_reduction_pct?.toFixed(1)}%</div>
+                                </div>
+                                <div className="glass-dark rounded-lg p-3">
+                                    <div className="text-gray-400 text-xs">Capital Freed</div>
+                                    <div className="text-green-400 font-bold">${(result.working_capital_freed/1000)?.toFixed(0)}K</div>
+                                </div>
+                                <div className="glass-dark rounded-lg p-3">
+                                    <div className="text-gray-400 text-xs">Route Reduction</div>
+                                    <div className="text-blue-400 font-bold">{result.routes_before} → {result.routes_after}</div>
+                                </div>
+                                <div className="glass-dark rounded-lg p-3">
+                                    <div className="text-gray-400 text-xs">Carbon Reduction</div>
+                                    <div className="text-green-400 font-bold">{result.carbon_reduction_pct?.toFixed(1)}%</div>
+                                </div>
+                            </div>
+                            
+                            {result.alerts && result.alerts.length > 0 && (
+                                <div className="glass-dark rounded-lg p-3">
+                                    <div className="text-yellow-400 text-xs font-medium mb-2">⚠️ Alerts</div>
+                                    {result.alerts.slice(0, 3).map((alert, i) => (
+                                        <div key={i} className="text-gray-300 text-xs mb-1">• {alert}</div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+        
+        function ScenarioPanel() {
+            const [scenarioType, setScenarioType] = useState('demand_shock');
+            const [demandChange, setDemandChange] = useState(20);
+            const [running, setRunning] = useState(false);
+            const [result, setResult] = useState(null);
+            
+            const runScenario = async () => {
+                setRunning(true);
+                try {
+                    const res = await api.runScenario({
+                        scenario_type: scenarioType,
+                        demand_change_pct: scenarioType === 'demand_shock' ? demandChange : null,
+                        supplier_id: scenarioType === 'supply_disruption' ? 'SUP-001' : null,
+                        disruption_days: 30,
+                    });
+                    setResult(res);
+                } catch (e) {
+                    console.error(e);
+                }
+                setRunning(false);
+            };
+            
+            return (
+                <div className="glass rounded-xl p-4">
+                    <h3 className="text-lg font-semibold text-white mb-4">🔮 What-If Scenarios</h3>
+                    
+                    <div className="space-y-4">
+                        <div>
+                            <label className="text-gray-400 text-sm">Scenario Type</label>
+                            <select 
+                                value={scenarioType}
+                                onChange={(e) => setScenarioType(e.target.value)}
+                                className="w-full mt-1 bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-700"
+                            >
+                                <option value="demand_shock">Demand Shock</option>
+                                <option value="supply_disruption">Supply Disruption</option>
+                            </select>
+                        </div>
+                        
+                        {scenarioType === 'demand_shock' && (
+                            <div>
+                                <label className="text-gray-400 text-sm">Demand Change: {demandChange > 0 ? '+' : ''}{demandChange}%</label>
+                                <input 
+                                    type="range"
+                                    min="-50"
+                                    max="50"
+                                    value={demandChange}
+                                    onChange={(e) => setDemandChange(parseInt(e.target.value))}
+                                    className="w-full mt-1"
+                                />
+                            </div>
+                        )}
+                        
+                        <button
+                            onClick={runScenario}
+                            disabled={running}
+                            className="w-full py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium transition-all disabled:opacity-50"
+                        >
+                            {running ? 'Analyzing...' : 'Run Scenario'}
+                        </button>
+                        
+                        {result && (
+                            <div className="glass-dark rounded-lg p-3">
+                                <div className="text-purple-400 text-sm font-medium mb-2">{result.scenario?.name}</div>
+                                <div className="text-gray-300 text-xs">
+                                    Products at risk: {result.results?.products_at_risk || 0}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+        
+        function RecommendationsPanel({ recommendations }) {
+            if (!recommendations || !recommendations.length) {
+                return (
+                    <div className="glass rounded-xl p-4">
+                        <h3 className="text-lg font-semibold text-white mb-4">📋 Replenishment Recommendations</h3>
+                        <div className="text-gray-400 text-center py-8">
+                            Run optimization to generate recommendations
+                        </div>
+                    </div>
+                );
+            }
+            
+            const getPriorityBadge = (priority) => {
+                const styles = {
+                    'Critical': 'bg-red-500/20 text-red-400',
+                    'High': 'bg-orange-500/20 text-orange-400',
+                    'Normal': 'bg-blue-500/20 text-blue-400',
+                    'Low': 'bg-gray-500/20 text-gray-400',
+                };
+                return styles[priority] || styles['Normal'];
+            };
+            
+            return (
+                <div className="glass rounded-xl p-4">
+                    <h3 className="text-lg font-semibold text-white mb-4">📋 Replenishment Recommendations</h3>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {recommendations.slice(0, 8).map((rec, i) => (
+                            <div key={i} className="glass-dark rounded-lg p-3 flex items-center justify-between">
+                                <div>
+                                    <div className="text-white text-sm font-medium">{rec.sku}</div>
+                                    <div className="text-gray-400 text-xs">{rec.product_name?.substring(0, 30)}</div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-blue-400 font-medium">Order: {rec.recommended_qty?.toLocaleString()}</div>
+                                    <div className={`text-xs px-2 py-0.5 rounded-full inline-block ${getPriorityBadge(rec.priority)}`}>
+                                        {rec.priority}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+        
+        function App() {
+            const [kpis, setKPIs] = useState(null);
+            const [inventory, setInventory] = useState([]);
+            const [suppliers, setSuppliers] = useState([]);
+            const [recommendations, setRecommendations] = useState([]);
+            const [optimizing, setOptimizing] = useState(false);
+            const [optimizationResult, setOptimizationResult] = useState(null);
+            const [activePhase, setActivePhase] = useState(null);
+            const [loading, setLoading] = useState(true);
+            
+            useEffect(() => {
+                loadData();
+            }, []);
+            
+            const loadData = async () => {
+                try {
+                    const [kpisRes, invRes, suppRes] = await Promise.all([
+                        api.getKPIs(),
+                        api.getInventory(),
+                        api.getSuppliers(),
+                    ]);
+                    
+                    setKPIs(kpisRes.kpis);
+                    setInventory(invRes.inventory || []);
+                    setSuppliers(suppRes.suppliers || []);
+                } catch (e) {
+                    console.error('Failed to load data:', e);
+                    // Set demo data
+                    setKPIs({
+                        inventory: { total_value: 2400000, total_skus: 12, stockout_count: 1, critical_count: 2, healthy_pct: 75 },
+                        suppliers: { total_count: 8, avg_score: 84.5, high_risk_count: 1 },
+                        performance: { fill_rate: 94.5, otif_rate: 91.2, forecast_accuracy: 87.3 },
+                    });
+                }
+                setLoading(false);
+            };
+            
+            const runOptimization = async () => {
+                setOptimizing(true);
+                setOptimizationResult(null);
+                
+                // Simulate phases
+                const phases = ['demand', 'inventory', 'logistics', 'strategic'];
+                
+                for (const phase of phases) {
+                    setActivePhase(phase);
+                    await new Promise(r => setTimeout(r, 1500));
+                }
+                
+                try {
+                    const { job_id } = await api.startOptimization({});
+                    
+                    // Poll for result
+                    let attempts = 0;
+                    while (attempts < 30) {
+                        await new Promise(r => setTimeout(r, 1000));
+                        const status = await api.getOptimizationStatus(job_id);
+                        
+                        if (status.status === 'completed') {
+                            setOptimizationResult(status.result);
+                            
+                            // Load recommendations
+                            const recsRes = await api.getRecommendations();
+                            setRecommendations(recsRes.recommendations || []);
+                            break;
+                        } else if (status.status === 'failed') {
+                            console.error('Optimization failed');
+                            break;
+                        }
+                        attempts++;
+                    }
+                } catch (e) {
+                    console.error('Optimization error:', e);
+                    // Set demo result
+                    setOptimizationResult({
+                        inventory_reduction_pct: 12.0,
+                        working_capital_freed: 300000,
+                        routes_before: 12,
+                        routes_after: 8,
+                        carbon_reduction_pct: 22.0,
+                        alerts: ['HIGH RISK SUPPLIER: FastTech Vietnam - Financial concerns'],
+                    });
+                }
+                
+                setActivePhase(null);
+                setOptimizing(false);
+            };
+            
+            if (loading) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center">
+                        <div className="text-center">
+                            <div className="text-6xl mb-4 animate-pulse">📦</div>
+                            <div className="text-xl text-blue-400">Loading Supply Chain Data...</div>
+                        </div>
+                    </div>
+                );
+            }
+            
+            return (
+                <div className="min-h-screen p-6">
+                    <div className="max-w-7xl mx-auto">
+                        <Header />
+                        
+                        <KPIDashboard kpis={kpis} />
+                        
+                        <div className="grid grid-cols-3 gap-6 mb-6">
+                            <div className="col-span-2">
+                                <HierarchyVisualization activePhase={activePhase} />
+                            </div>
+                            <div className="space-y-6">
+                                <OptimizationPanel 
+                                    onOptimize={runOptimization}
+                                    optimizing={optimizing}
+                                    result={optimizationResult}
+                                />
+                                <ScenarioPanel />
+                            </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-6 mb-6">
+                            <InventoryTable inventory={inventory} />
+                            <SupplierScorecard suppliers={suppliers} />
+                        </div>
+                        
+                        <RecommendationsPanel recommendations={recommendations} />
+                    </div>
+                </div>
+            );
+        }
+        
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
