@@ -1,7 +1,7 @@
 """
 📦 Supply Chain Optimizer - FastAPI Backend
 
-REST API for supply chain optimization operations.
+REST API for supply chain optimization operations. 
 """
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
