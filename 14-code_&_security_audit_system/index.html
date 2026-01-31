@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔒 Code Review & Security Audit</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; }
+        code, pre, .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            min-height: 100vh;
+        }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .severity-critical { background: rgba(239, 68, 68, 0.2); border-color: #ef4444; }
+        .severity-high { background: rgba(249, 115, 22, 0.2); border-color: #f97316; }
+        .severity-medium { background: rgba(234, 179, 8, 0.2); border-color: #eab308; }
+        .severity-low { background: rgba(59, 130, 246, 0.2); border-color: #3b82f6; }
+        
+        .code-block {
+            background: #1e1e1e;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .line-highlight {
+            background: rgba(239, 68, 68, 0.2);
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.5); border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        const API_BASE = '';
+        
+        // =================================================================
+        // API
+        // =================================================================
+        const api = {
+            async reviewCode(code, language) {
+                const res = await fetch(`${API_BASE}/api/review`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code, language }),
+                });
+                return res.json();
+            },
+            async getSecurityChecks() {
+                const res = await fetch(`${API_BASE}/api/security-checks`);
+                return res.json();
+            },
+        };
+        
+        // =================================================================
+        // Components
+        // =================================================================
+        
+        function Header() {
+            return (
+                <div className="glass p-4 mb-6 rounded-xl">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="text-4xl">🔒</div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-white">Code Review & Security Audit</h1>
+                                <p className="text-gray-400 text-sm">AutoGen Pipeline • OWASP Top 10 Detection</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-sm">
+                                ● Ready
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        
+        function PipelineDiagram() {
+            return (
+                <div className="glass p-4 rounded-xl mb-6">
+                    <h3 className="text-lg font-semibold text-white mb-4">Pipeline Architecture</h3>
+                    <div className="flex items-center justify-center gap-2 text-sm">
+                        <div className="px-3 py-2 rounded bg-blue-500/20 text-blue-400">Code Input</div>
+                        <span className="text-gray-500">→</span>
+                        <div className="flex gap-1">
+                            <div className="px-2 py-1 rounded bg-purple-500/20 text-purple-400 text-xs">Syntax</div>
+                            <div className="px-2 py-1 rounded bg-red-500/20 text-red-400 text-xs">Security</div>
+                            <div className="px-2 py-1 rounded bg-yellow-500/20 text-yellow-400 text-xs">Style</div>
+                            <div className="px-2 py-1 rounded bg-green-500/20 text-green-400 text-xs">Perf</div>
+                        </div>
+                        <span className="text-gray-500">→</span>
+                        <div className="px-3 py-2 rounded bg-indigo-500/20 text-indigo-400">Aggregate</div>
+                        <span className="text-gray-500">→</span>
+                        <div className="px-3 py-2 rounded bg-pink-500/20 text-pink-400">Prioritize</div>
+                        <span className="text-gray-500">→</span>
+                        <div className="px-3 py-2 rounded bg-cyan-500/20 text-cyan-400">Report</div>
+                    </div>
+                </div>
+            );
+        }
+        
+        function CodeEditor({ code, setCode, language, setLanguage }) {
+            return (
+                <div className="glass p-4 rounded-xl">
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-lg font-semibold text-white">Code Input</h3>
+                        <select
+                            value={language}
+                            onChange={(e) => setLanguage(e.target.value)}
+                            className="bg-gray-800 text-white px-3 py-1 rounded border border-gray-700"
+                        >
+                            <option value="python">Python</option>
+                            <option value="javascript">JavaScript</option>
+                            <option value="typescript">TypeScript</option>
+                        </select>
+                    </div>
+                    <textarea
+                        value={code}
+                        onChange={(e) => setCode(e.target.value)}
+                        className="w-full h-64 bg-gray-900 text-gray-100 p-4 rounded-lg mono text-sm border border-gray-700 focus:border-indigo-500 focus:outline-none"
+                        placeholder="Paste your code here..."
+                        spellCheck={false}
+                    />
+                </div>
+            );
+        }
+        
+        function SeverityBadge({ severity }) {
+            const styles = {
+                critical: 'bg-red-500/20 text-red-400 border-red-500',
+                high: 'bg-orange-500/20 text-orange-400 border-orange-500',
+                medium: 'bg-yellow-500/20 text-yellow-400 border-yellow-500',
+                low: 'bg-blue-500/20 text-blue-400 border-blue-500',
+                info: 'bg-gray-500/20 text-gray-400 border-gray-500',
+            };
+            
+            const icons = {
+                critical: '🔴',
+                high: '🟠',
+                medium: '🟡',
+                low: '🔵',
+                info: '⚪',
+            };
+            
+            return (
+                <span className={`px-2 py-1 rounded-full text-xs border ${styles[severity] || styles.info}`}>
+                    {icons[severity]} {severity.toUpperCase()}
+                </span>
+            );
+        }
+        
+        function IssueCard({ issue }) {
+            const [expanded, setExpanded] = useState(false);
+            
+            return (
+                <div className={`glass p-4 rounded-lg mb-3 border-l-4 severity-${issue.severity}`}>
+                    <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                                <SeverityBadge severity={issue.severity} />
+                                <span className="text-xs text-gray-400 px-2 py-0.5 rounded bg-gray-700">
+                                    {issue.category}
+                                </span>
+                                {issue.cwe_id && (
+                                    <span className="text-xs text-purple-400">{issue.cwe_id}</span>
+                                )}
+                            </div>
+                            <h4 className="text-white font-medium mb-1">{issue.title}</h4>
+                            <p className="text-gray-400 text-sm mb-2">{issue.description}</p>
+                            <div className="text-xs text-cyan-400 mono">📍 {issue.location}</div>
+                        </div>
+                        <button
+                            onClick={() => setExpanded(!expanded)}
+                            className="text-gray-400 hover:text-white ml-4"
+                        >
+                            {expanded ? '▲' : '▼'}
+                        </button>
+                    </div>
+                    
+                    {expanded && issue.fix_suggestion && (
+                        <div className="mt-4 pt-4 border-t border-gray-700">
+                            <div className="text-sm">
+                                <div className="text-green-400 mb-2">💡 Fix Suggestion:</div>
+                                <div className="text-gray-300 bg-gray-800 p-3 rounded mono text-xs">
+                                    {issue.fix_suggestion}
+                                </div>
+                            </div>
+                            {issue.auto_fixable && (
+                                <div className="mt-2 text-xs text-green-400">
+                                    ✅ Auto-fixable
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+        
+        function ResultsSummary({ summary }) {
+            if (!summary) return null;
+            
+            return (
+                <div className="glass p-4 rounded-xl mb-6">
+                    <h3 className="text-lg font-semibold text-white mb-4">📊 Summary</h3>
+                    <div className="grid grid-cols-5 gap-4">
+                        <div className="text-center p-3 rounded-lg bg-gray-800">
+                            <div className="text-2xl font-bold text-white">{summary.total_lines}</div>
+                            <div className="text-xs text-gray-400">Lines</div>
+                        </div>
+                        <div className="text-center p-3 rounded-lg bg-red-900/30">
+                            <div className="text-2xl font-bold text-red-400">{summary.issues.critical}</div>
+                            <div className="text-xs text-gray-400">Critical</div>
+                        </div>
+                        <div className="text-center p-3 rounded-lg bg-orange-900/30">
+                            <div className="text-2xl font-bold text-orange-400">{summary.issues.high}</div>
+                            <div className="text-xs text-gray-400">High</div>
+                        </div>
+                        <div className="text-center p-3 rounded-lg bg-yellow-900/30">
+                            <div className="text-2xl font-bold text-yellow-400">{summary.issues.medium}</div>
+                            <div className="text-xs text-gray-400">Medium</div>
+                        </div>
+                        <div className="text-center p-3 rounded-lg bg-blue-900/30">
+                            <div className="text-2xl font-bold text-blue-400">{summary.issues.low}</div>
+                            <div className="text-xs text-gray-400">Low</div>
+                        </div>
+                    </div>
+                    
+                    <div className="mt-4 flex items-center justify-between">
+                        <div className="text-gray-400">
+                            Quality Score: <span className="text-white font-bold">{summary.quality_score?.toFixed(1)}/10</span>
+                        </div>
+                        <div className="text-gray-400">
+                            Total Issues: <span className="text-white font-bold">{summary.issues.total}</span>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        
+        function IssuesList({ issues }) {
+            if (!issues || issues.length === 0) {
+                return (
+                    <div className="glass p-8 rounded-xl text-center">
+                        <div className="text-4xl mb-4">✅</div>
+                        <div className="text-white font-medium">No issues found!</div>
+                        <div className="text-gray-400 text-sm">Your code looks clean.</div>
+                    </div>
+                );
+            }
+            
+            // Group by severity
+            const bySeverity = {
+                critical: issues.filter(i => i.severity === 'critical'),
+                high: issues.filter(i => i.severity === 'high'),
+                medium: issues.filter(i => i.severity === 'medium'),
+                low: issues.filter(i => i.severity === 'low'),
+            };
+            
+            return (
+                <div className="space-y-4">
+                    {bySeverity.critical.length > 0 && (
+                        <div>
+                            <h4 className="text-red-400 font-medium mb-3">🔴 Critical ({bySeverity.critical.length})</h4>
+                            {bySeverity.critical.map((issue, i) => (
+                                <IssueCard key={i} issue={issue} />
+                            ))}
+                        </div>
+                    )}
+                    
+                    {bySeverity.high.length > 0 && (
+                        <div>
+                            <h4 className="text-orange-400 font-medium mb-3">🟠 High ({bySeverity.high.length})</h4>
+                            {bySeverity.high.map((issue, i) => (
+                                <IssueCard key={i} issue={issue} />
+                            ))}
+                        </div>
+                    )}
+                    
+                    {bySeverity.medium.length > 0 && (
+                        <div>
+                            <h4 className="text-yellow-400 font-medium mb-3">🟡 Medium ({bySeverity.medium.length})</h4>
+                            {bySeverity.medium.map((issue, i) => (
+                                <IssueCard key={i} issue={issue} />
+                            ))}
+                        </div>
+                    )}
+                    
+                    {bySeverity.low.length > 0 && (
+                        <div>
+                            <h4 className="text-blue-400 font-medium mb-3">🔵 Low ({bySeverity.low.length})</h4>
+                            {bySeverity.low.slice(0, 5).map((issue, i) => (
+                                <IssueCard key={i} issue={issue} />
+                            ))}
+                            {bySeverity.low.length > 5 && (
+                                <div className="text-gray-400 text-sm text-center py-2">
+                                    + {bySeverity.low.length - 5} more low severity issues
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+        
+        function Recommendations({ recommendations }) {
+            if (!recommendations || recommendations.length === 0) return null;
+            
+            return (
+                <div className="glass p-4 rounded-xl mt-6">
+                    <h3 className="text-lg font-semibold text-white mb-4">💡 Recommendations</h3>
+                    <ul className="space-y-2">
+                        {recommendations.map((rec, i) => (
+                            <li key={i} className="flex items-start gap-2 text-gray-300">
+                                <span className="text-indigo-400">{i + 1}.</span>
+                                {rec}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            );
+        }
+        
+        function App() {
+            const [code, setCode] = useState(`# Paste your code here for review
+import os
+
+SECRET_KEY = "hardcoded_secret_123"
+
+def login(username, password):
+    query = f"SELECT * FROM users WHERE name = '{username}'"
+    os.system(f"echo {password}")
+    return eval(username)
+`);
+            const [language, setLanguage] = useState('python');
+            const [result, setResult] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
+            
+            const runReview = async () => {
+                setLoading(true);
+                setError(null);
+                
+                try {
+                    const res = await api.reviewCode(code, language);
+                    setResult(res);
+                } catch (e) {
+                    setError('Review failed. Make sure the API server is running.');
+                    console.error(e);
+                }
+                
+                setLoading(false);
+            };
+            
+            return (
+                <div className="min-h-screen p-6">
+                    <div className="max-w-6xl mx-auto">
+                        <Header />
+                        <PipelineDiagram />
+                        
+                        <div className="grid grid-cols-2 gap-6">
+                            <div>
+                                <CodeEditor
+                                    code={code}
+                                    setCode={setCode}
+                                    language={language}
+                                    setLanguage={setLanguage}
+                                />
+                                
+                                <button
+                                    onClick={runReview}
+                                    disabled={loading || !code.trim()}
+                                    className={`w-full mt-4 py-3 rounded-lg font-medium transition-all ${
+                                        loading
+                                            ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                            : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white'
+                                    }`}
+                                >
+                                    {loading ? (
+                                        <span className="flex items-center justify-center gap-2">
+                                            <span className="animate-spin">⚙️</span>
+                                            Analyzing...
+                                        </span>
+                                    ) : (
+                                        '🔍 Run Code Review'
+                                    )}
+                                </button>
+                                
+                                {error && (
+                                    <div className="mt-4 p-4 rounded-lg bg-red-900/30 border border-red-500 text-red-400">
+                                        {error}
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <div className="space-y-6">
+                                {result ? (
+                                    <>
+                                        <ResultsSummary summary={result.summary} />
+                                        <div className="glass p-4 rounded-xl">
+                                            <h3 className="text-lg font-semibold text-white mb-4">
+                                                🔍 Issues Found ({result.issues?.length || 0})
+                                            </h3>
+                                            <div className="max-h-[500px] overflow-y-auto pr-2">
+                                                <IssuesList issues={result.issues} />
+                                            </div>
+                                        </div>
+                                        <Recommendations recommendations={result.recommendations} />
+                                    </>
+                                ) : (
+                                    <div className="glass p-8 rounded-xl text-center">
+                                        <div className="text-6xl mb-4 opacity-50">🔒</div>
+                                        <div className="text-gray-400">
+                                            Paste your code and click "Run Code Review" to analyze
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
