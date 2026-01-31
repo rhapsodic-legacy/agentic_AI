@@ -48,4 +48,5 @@ An **AutoGen** powered autonomous incident response system that detects issues, 
 ### 13) Supply Chain Optimizer
  An end to end supply chain optimization system using a hierarchical multi-agent architecture. Handles demand forecasting, inventory management, supplier selection, and logistics planning.
 
- 
+### 14) Code Review & Security Audit System
+ An automated code review system that checks code quality, identifies security vulnerabilities, ensures best practices, and provides improvement suggestions using a pipeline architecture.
