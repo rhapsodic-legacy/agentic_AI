@@ -2,7 +2,7 @@
 Code Review - Code Quality Analyzers
 
 Analyzers for:
-- Syntax and error detection
+- Syntax and error detection 
 - Code style (PEP8, ESLint-like)
 - Performance anti-patterns
 - Complexity metrics
