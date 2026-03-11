@@ -1,4 +1,4 @@
-# agentic_AI                                                                                                                                                           
+# agentic_AI                                                                                                                                                            
 A comprehensive collection of hierarchal Agentic AI setups, covering different frameworks and architectures.  
  
 ### 1) AI Software Dev Team
